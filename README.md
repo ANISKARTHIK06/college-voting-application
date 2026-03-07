@@ -1,54 +1,41 @@
 # College Voting Application
 
-A production-ready MERN stack web application for college voting.
+A MERN Stack based web application for conducting secure and transparent college voting.
 
 ## 📂 Project Structure
 
-### 🏗️ Root Directory
-- **`/client`**: Contains the React + Vite frontend application.
-- **`/backend`**: Contains the Node.js + Express backend application.
+college-voting-app
+│
+├── Frontend (React + Vite)
+│
+├── Backend (Node.js + Express + MongoDB)
+│
+└── README.md
 
-## 🚀 Getting Started
+## 🚀 Features
 
-### Prerequisites
-- Node.js (v14 or higher)
-- MongoDB (Local or Atlas)
+- Role Based System (Admin / User)
+- Admin can create voting events
+- Students and staff can vote
+- One vote per user
+- Real-time vote results
+- Secure authentication using JWT
 
-### Installation
+## 🛠 Tech Stack
 
-1.  **Clone the repository**:
-    ```bash
-    git clone <repository-url>
-    ```
+Frontend:
+- React
+- Vite
+- Tailwind CSS
+- Axios
 
-2.  **Install Backend Dependencies**:
-    ```bash
-    cd backend
-    npm install
-    ```
+Backend:
+- Node.js
+- Express
+- MongoDB
+- Mongoose
+- JWT Authentication
 
-3.  **Install Frontend Dependencies**:
-    ```bash
-    cd ../client
-    npm install
-    ```
+## ⚙️ Running the Project
 
-### Running the Application
-
-1.  **Start Backend**:
-    ```bash
-    cd backend
-    npm run dev
-    ```
-    Server will start on `http://localhost:5000`.
-
-2.  **Start Frontend**:
-    ```bash
-    cd client
-    npm run dev
-    ```
-    Application will open at `http://localhost:5173`.
-
-## 🛠️ Tech Stack
-- **Frontend**: React, Vite, Tailwind CSS, Axios, Context API.
-- **Backend**: Node.js, Express, MongoDB, Mongoose, JWT, Bcrypt.
+### Backend
