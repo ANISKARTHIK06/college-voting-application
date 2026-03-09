@@ -11,7 +11,7 @@ exports.register = async (req, res) => {
         // Check if user exists
         const userExists = await User.findOne({ email });
         if (userExists) {
-            return res.status(400).json({ message: "User already exists" });
+            return res.status(409).json({ message: "An account with this email address already exists." });
         }
 
         // Create user
@@ -19,8 +19,8 @@ exports.register = async (req, res) => {
             name,
             email,
             password,
-            role: role || "user", // Default to user if not specified
-            userType,
+            role: role || "student", // Default to student if not specified
+            userType: userType || "student", // Default to student
             department,
             position,
         });
@@ -51,16 +51,23 @@ exports.login = async (req, res) => {
 
         // Validate input
         if (!email || !password) {
+            console.log("Login failed: missing email or password");
             return res.status(400).json({
                 message: "Please provide both email and password",
                 received: { email: !!email, password: !!password }
             });
         }
 
-        // Check for user email
-        const user = await User.findOne({ email }).select("+password");
+        console.log(`Login attempt for email: "${email}", password length: ${password.length}`);
+
+        // Check for user email (case-insensitive)
+        const user = await User.findOne({ email: { $regex: new RegExp('^' + email.trim() + '$', 'i') } }).select("+password");
+        
+        if (!user) console.log(`User not found for email: "${email}"`);
+        else console.log(`User found. Checking password...`);
 
         if (user && (await user.matchPassword(password))) {
+            console.log(`Login successful for ${email}`);
             res.json({
                 _id: user._id,
                 name: user.name,

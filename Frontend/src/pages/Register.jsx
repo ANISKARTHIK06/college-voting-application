@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register } from '../services/authService';
+import { toast } from 'react-hot-toast';
 import '../styles/Auth.css';
 
 function Register() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
+        name: 'Demo Student',
+        email: `demo.student${Math.floor(Math.random() * 10000)}@college.edu`,
+        password: 'password123',
+        confirmPassword: 'password123',
         userType: 'student',
-        department: '',
-        position: ''
+        department: 'Computer Science',
+        position: '2nd Year'
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -38,21 +39,24 @@ function Register() {
 
         try {
             const { confirmPassword, ...userData } = formData;
-            const data = await register({ ...userData, role: 'user' });
-            navigate('/user/dashboard');
+            await register({ ...userData, role: 'student' });
+            navigate('/student/dashboard');
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed. Please try again.');
+            const errorMsg = err.response?.data?.message || 'Registration failed. Please check the information.';
+            setError(errorMsg);
+            toast.error(errorMsg);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="auth-page">
-            <div className="auth-card glass-panel" style={{ maxWidth: '600px' }}>
+        <div className="auth-page animate-fadeIn">
+            <div className="auth-card register-card glass-panel animate-slideUp">
                 <div className="auth-header">
-                    <h1>Create Account</h1>
-                    <p>Join the democratic process</p>
+                    <div className="auth-brand animate-float">🗳️</div>
+                    <h1 className="auth-title">Join CollegeVote</h1>
+                    <p className="auth-subtitle">Empowering your voice in college governance</p>
                 </div>
 
                 <form className="auth-form" onSubmit={handleSubmit}>
@@ -60,12 +64,11 @@ function Register() {
 
                     <div className="register-grid">
                         <div className="form-group">
-                            <label htmlFor="name">Full Name</label>
+                            <label className="form-label">Full Name</label>
                             <input
                                 type="text"
-                                id="name"
                                 name="name"
-                                className="auth-input"
+                                className="form-input"
                                 placeholder="John Doe"
                                 value={formData.name}
                                 onChange={handleChange}
@@ -74,12 +77,11 @@ function Register() {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="email">Email</label>
+                            <label className="form-label">Email Address</label>
                             <input
                                 type="email"
-                                id="email"
                                 name="email"
-                                className="auth-input"
+                                className="form-input"
                                 placeholder="name@college.edu"
                                 value={formData.email}
                                 onChange={handleChange}
@@ -88,11 +90,11 @@ function Register() {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="userType">I am a</label>
+                            <label className="form-label">I am a</label>
                             <select
-                                id="userType"
+                                id="role-selector"
                                 name="userType"
-                                className="auth-input"
+                                className="form-input"
                                 value={formData.userType}
                                 onChange={handleChange}
                                 required
@@ -103,12 +105,11 @@ function Register() {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="department">Department</label>
+                            <label className="form-label">Department</label>
                             <input
                                 type="text"
-                                id="department"
                                 name="department"
-                                className="auth-input"
+                                className="form-input"
                                 placeholder="e.g. Computer Science"
                                 value={formData.department}
                                 onChange={handleChange}
@@ -117,12 +118,11 @@ function Register() {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="position">Position/Year</label>
+                            <label className="form-label">Position / Year</label>
                             <input
                                 type="text"
-                                id="position"
                                 name="position"
-                                className="auth-input"
+                                className="form-input"
                                 placeholder="e.g. 3rd Year / Professor"
                                 value={formData.position}
                                 onChange={handleChange}
@@ -131,12 +131,11 @@ function Register() {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="password">Password</label>
+                            <label className="form-label">Password</label>
                             <input
                                 type="password"
-                                id="password"
                                 name="password"
-                                className="auth-input"
+                                className="form-input"
                                 placeholder="••••••••"
                                 value={formData.password}
                                 onChange={handleChange}
@@ -146,12 +145,11 @@ function Register() {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="confirmPassword">Confirm Password</label>
+                        <label className="form-label">Confirm Password</label>
                         <input
                             type="password"
-                            id="confirmPassword"
                             name="confirmPassword"
-                            className="auth-input"
+                            className="form-input"
                             placeholder="••••••••"
                             value={formData.confirmPassword}
                             onChange={handleChange}
@@ -159,8 +157,8 @@ function Register() {
                         />
                     </div>
 
-                    <button type="submit" className="btn-auth" disabled={loading}>
-                        {loading ? 'Creating Account...' : 'Continue'}
+                    <button type="submit" className="btn-auth" disabled={loading} style={{ marginTop: '12px' }}>
+                        {loading ? 'Creating Account...' : 'Continue to Dashboard'}
                     </button>
                 </form>
 

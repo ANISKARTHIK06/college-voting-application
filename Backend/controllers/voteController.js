@@ -1,15 +1,30 @@
-const Vote = require("../models/Vote");
-const VotesCast = require("../models/VotesCast");
+const Vote = require('../models/Vote');
+const VotesCast = require('../models/VotesCast');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 // @desc    Create new vote
 // @route   POST /api/votes
 // @access  Private/Admin
 exports.createVote = async (req, res) => {
     try {
-        const vote = await Vote.create({
+        const vote = new Vote({
             ...req.body,
             createdBy: req.user._id,
         });
+        await vote.save();
+
+        // Notify eligible users if election is launched immediately (active)
+        if (vote.status === 'active') {
+            const users = await User.find({ role: 'user' }); // Simplification, could filter by eligibleGroup
+            const notifications = users.map(u => ({
+                userId: u._id,
+                title: "🗳️ New Election Announced",
+                description: `A new election "${vote.title}" is now open for bidding. Head to the booth to participate.`,
+                type: 'election'
+            }));
+            await Notification.insertMany(notifications);
+        }
 
         res.status(201).json(vote);
     } catch (error) {
@@ -110,17 +125,26 @@ exports.getResults = async (req, res) => {
             return res.status(403).json({ message: "Results are not yet published" });
         }
 
-        const votes = await VotesCast.find({ voteId: vote._id });
+        const votes = await VotesCast.find({ voteId: vote._id }).populate('userId', 'department');
 
-        // Basic count logic for "Election" and "Approval" types
+        // Results logic
         const results = {};
+        const departmentTurnout = {}; // { "CS": 10, "IT": 5 }
+        
         vote.candidates.forEach((c) => {
             results[c._id] = 0;
         });
 
         votes.forEach((v) => {
+            // Candidate counts
             if (v.candidateId && results[v.candidateId] !== undefined) {
                 results[v.candidateId]++;
+            }
+            
+            // Department turnout
+            if (v.userId && v.userId.department) {
+                const dept = v.userId.department;
+                departmentTurnout[dept] = (departmentTurnout[dept] || 0) + 1;
             }
         });
 
@@ -128,6 +152,7 @@ exports.getResults = async (req, res) => {
             vote,
             totalVotes: votes.length,
             results,
+            departmentTurnout
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -140,7 +165,33 @@ exports.getResults = async (req, res) => {
 exports.updateVoteStatus = async (req, res) => {
     try {
         const { status } = req.body;
-        const vote = await Vote.findByIdAndUpdate(req.params.id, { status }, { new: true });
+        const vote = await Vote.findById(req.params.id);
+        if (!vote) return res.status(404).json({ message: "Vote not found" });
+
+        vote.status = status;
+        await vote.save();
+
+        // Trigger Notifications based on status change
+        if (status === 'active') {
+            const users = await User.find({ role: 'user' });
+            const notifications = users.map(u => ({
+                userId: u._id,
+                title: "🚀 Election Launched",
+                description: `Voting for "${vote.title}" has officially started. Securely cast your ballot now.`,
+                type: 'election'
+            }));
+            await Notification.insertMany(notifications);
+        } else if (status === 'published') {
+            const users = await User.find({ role: 'user' });
+            const notifications = users.map(u => ({
+                userId: u._id,
+                title: "🏆 Results Published",
+                description: `The certified results for "${vote.title}" are now available for public review.`,
+                type: 'result'
+            }));
+            await Notification.insertMany(notifications);
+        }
+
         res.json(vote);
     } catch (error) {
         res.status(500).json({ message: error.message });

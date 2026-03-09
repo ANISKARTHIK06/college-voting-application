@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { getCurrentUser } from '../services/authService';
+import { getCurrentUser } from '../../services/authService';
 
 const ProtectedRoute = ({ roles }) => {
     const user = getCurrentUser();
@@ -9,7 +9,10 @@ const ProtectedRoute = ({ roles }) => {
     }
 
     if (roles && !roles.includes(user.role)) {
-        return <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'} replace />;
+        let redirectPath = '/student/dashboard';
+        if (user.role === 'admin') redirectPath = '/admin/dashboard';
+        else if (user.role === 'faculty') redirectPath = '/faculty/dashboard';
+        return <Navigate to={redirectPath} replace />;
     }
 
     return <Outlet />;

@@ -8,7 +8,10 @@ class UserRegister(BaseModel):
     name: str = Field(..., min_length=1)
     email: EmailStr
     password: str = Field(..., min_length=6)
-    role: str = Field(default="student", pattern="^(student|admin|staff)$")
+    role: str = Field(default="user", pattern="^(admin|user)$")
+    userType: str = Field(default="student", pattern="^(student|staff)$")
+    department: Optional[str] = None
+    position: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -22,6 +25,9 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str
+    userType: str
+    department: Optional[str] = None
+    position: Optional[str] = None
 
 
 class AuthResponse(BaseModel):

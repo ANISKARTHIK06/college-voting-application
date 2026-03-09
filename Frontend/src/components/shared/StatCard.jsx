@@ -1,20 +1,20 @@
-const StatCard = ({ icon, value, label, trend }) => {
-    return (
-        <div className="glass-card stat-card">
-            <div className="stat-header">
-                <span className="stat-icon-box">{icon}</span>
-                {trend && (
-                    <span className={`stat-trend ${trend > 0 ? 'up' : 'down'}`}>
-                        {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
-                    </span>
-                )}
-            </div>
-            <div className="stat-body">
-                <h3 className="stat-value">{value}</h3>
-                <p className="stat-label">{label}</p>
-            </div>
-        </div>
-    );
+const StatCard = ({ icon, value, label, trend, trendType = 'up' }) => {
+  return (
+    <div className="stat-card glass-panel animate-slideUp">
+      <div className="stat-card-header">
+        <div className="stat-icon">{icon}</div>
+        {trend && (
+          <div className={`stat-trend ${trendType}`}>
+            {trendType === 'up' ? '↗' : '↘'} {trend}%
+          </div>
+        )}
+      </div>
+      <div className="stat-card-body">
+        <div className="stat-value">{value}</div>
+        <div className="stat-label">{label}</div>
+      </div>
+    </div>
+  );
 };
 
 export default StatCard;

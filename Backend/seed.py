@@ -21,102 +21,128 @@ async def seed():
 
     # Clear existing data
     await db.users.delete_many({})
-    await db.polls.delete_many({})
+    await db.votes.delete_many({})
+    await db.votescast.delete_many({})
     print("Data Cleared...")
 
-    # Create Users
+    # ── Users ──────────────────────────────────────────────────────────
+    # Admin: a staff member (e.g. Election Coordinator)
     admin = {
         "_id": ObjectId(),
         "name": "System Admin",
         "email": "admin@test.com",
         "password": pwd_context.hash("password123"),
         "role": "admin",
+        "userType": "staff",
+        "department": "Administration",
+        "position": "Election Coordinator",
+        "createdAt": datetime.now(timezone.utc),
     }
 
-    student = {
+    # Admin: a student representative (e.g. Class Representative)
+    cr_admin = {
+        "_id": ObjectId(),
+        "name": "Alice CR",
+        "email": "cr@test.com",
+        "password": pwd_context.hash("password123"),
+        "role": "admin",
+        "userType": "student",
+        "department": "Computer Science",
+        "position": "Class Representative",
+        "createdAt": datetime.now(timezone.utc),
+    }
+
+    # Regular user – student
+    student_user = {
         "_id": ObjectId(),
         "name": "John Student",
         "email": "student@test.com",
         "password": pwd_context.hash("password123"),
-        "role": "student",
+        "role": "user",
+        "userType": "student",
+        "department": "Computer Science",
+        "position": "3rd Year",
+        "createdAt": datetime.now(timezone.utc),
     }
 
-    staff = {
+    # Regular user – staff
+    staff_user = {
         "_id": ObjectId(),
         "name": "Dr. Professor",
         "email": "staff@test.com",
         "password": pwd_context.hash("password123"),
-        "role": "staff",
+        "role": "user",
+        "userType": "staff",
+        "department": "Computer Science",
+        "position": "Professor",
+        "createdAt": datetime.now(timezone.utc),
     }
 
-    await db.users.insert_many([admin, student, staff])
+    await db.users.insert_many([admin, cr_admin, student_user, staff_user])
     print("Users Created...")
 
-    # Create Polls
+    # ── Votes ───────────────────────────────────────────────────────────
     now = datetime.now(timezone.utc)
-    polls = [
+    votes = [
         {
             "_id": ObjectId(),
             "title": "Student Body President Election 2026",
             "description": "Vote for the next student body president. Choose wisely!",
-            "type": "election",
-            "options": [
-                {"_id": ObjectId(), "text": "Candidate A - Changes for Better", "voteCount": 0},
-                {"_id": ObjectId(), "text": "Candidate B - Innovation First", "voteCount": 0},
-                {"_id": ObjectId(), "text": "Candidate C - Tradition & Values", "voteCount": 0},
-            ],
             "createdBy": admin["_id"],
-            "allowedRoles": ["student"],
-            "startDate": now,
-            "endDate": now + timedelta(days=7),
-            "isActive": True,
-            "voters": [],
+            "votingType": "Election",
+            "candidates": [
+                {"name": "Candidate A", "description": "Changes for Better", "image": ""},
+                {"name": "Candidate B", "description": "Innovation First", "image": ""},
+                {"name": "Candidate C", "description": "Tradition & Values", "image": ""},
+            ],
+            "eligibleGroup": "All Users",
+            "eligibleValues": [],
+            "startTime": now,
+            "endTime": now + timedelta(days=7),
+            "status": "active",
             "createdAt": now,
-            "updatedAt": now,
         },
         {
             "_id": ObjectId(),
             "title": "Annual Tech Fest Theme",
             "description": "What should be the theme for this year's tech fest?",
-            "type": "event",
-            "options": [
-                {"_id": ObjectId(), "text": "AI & Future", "voteCount": 0},
-                {"_id": ObjectId(), "text": "Cyberpunk 2077", "voteCount": 0},
-                {"_id": ObjectId(), "text": "Sustainable Tech", "voteCount": 0},
+            "createdBy": cr_admin["_id"],
+            "votingType": "Approval",
+            "candidates": [
+                {"name": "AI & Future", "description": "", "image": ""},
+                {"name": "Cyberpunk 2077", "description": "", "image": ""},
+                {"name": "Sustainable Tech", "description": "", "image": ""},
             ],
-            "createdBy": staff["_id"],
-            "allowedRoles": ["student", "staff"],
-            "startDate": now,
-            "endDate": now + timedelta(days=3),
-            "isActive": True,
-            "voters": [],
+            "eligibleGroup": "Department",
+            "eligibleValues": ["Computer Science"],
+            "startTime": now,
+            "endTime": now + timedelta(days=3),
+            "status": "active",
             "createdAt": now,
-            "updatedAt": now,
         },
         {
             "_id": ObjectId(),
             "title": "Cafeteria Feedback",
             "description": "How would you rate the new menu?",
-            "type": "feedback",
-            "options": [
-                {"_id": ObjectId(), "text": "Excellent", "voteCount": 0},
-                {"_id": ObjectId(), "text": "Good", "voteCount": 0},
-                {"_id": ObjectId(), "text": "Needs Improvement", "voteCount": 0},
-                {"_id": ObjectId(), "text": "Poor", "voteCount": 0},
-            ],
             "createdBy": admin["_id"],
-            "allowedRoles": [],
-            "startDate": now,
-            "endDate": now + timedelta(days=14),
-            "isActive": True,
-            "voters": [],
+            "votingType": "Approval",
+            "candidates": [
+                {"name": "Excellent", "description": "", "image": ""},
+                {"name": "Good", "description": "", "image": ""},
+                {"name": "Needs Improvement", "description": "", "image": ""},
+                {"name": "Poor", "description": "", "image": ""},
+            ],
+            "eligibleGroup": "All Users",
+            "eligibleValues": [],
+            "startTime": now,
+            "endTime": now + timedelta(days=14),
+            "status": "active",
             "createdAt": now,
-            "updatedAt": now,
         },
     ]
 
-    await db.polls.insert_many(polls)
-    print("Polls Created...")
+    await db.votes.insert_many(votes)
+    print("Votes Created...")
 
     print("Data Imported Successfully!")
     client.close()
@@ -124,3 +150,4 @@ async def seed():
 
 if __name__ == "__main__":
     asyncio.run(seed())
+
