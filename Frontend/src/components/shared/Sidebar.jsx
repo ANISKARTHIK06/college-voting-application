@@ -13,7 +13,8 @@ import {
   Bell,
   RefreshCw,
   ClipboardList,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react';
 
 const adminItems = [
@@ -22,7 +23,6 @@ const adminItems = [
   { label: 'Election Requests', path: '/admin/election-requests', icon: <RefreshCw size={18} /> },
   { label: 'Users', path: '/admin/users', icon: <Users size={18} /> },
   { label: 'Announcements', path: '/admin/announcements', icon: <Megaphone size={18} /> },
-
   { label: 'Activity Logs', path: '/admin/activity', icon: <ClipboardList size={18} /> },
   { label: 'Analytics', path: '/admin/analytics', icon: <LineChart size={18} />, section: 'REPORTS' },
   { label: 'Profile', path: '/admin/profile', icon: <UserCircle size={18} />, section: 'ACCOUNT' },
@@ -55,22 +55,26 @@ const getNavItems = (role) => {
   return studentItems;
 };
 
-const Sidebar = ({ collapsed, role }) => {
+const Sidebar = ({ collapsed, mobileOpen, role, onClose }) => {
   const location = useLocation();
   const menuItems = getNavItems(role);
   let lastSection = null;
 
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="brand-icon">🗳️</div>
         {!collapsed && (
-          <div>
+          <div style={{ flex: 1 }}>
             <div className="brand-name">CollegeVote</div>
             <div className="brand-tagline">Governance Platform</div>
           </div>
         )}
+        {/* Mobile close button */}
+        <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">
+          <X size={18} />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -89,6 +93,7 @@ const Sidebar = ({ collapsed, role }) => {
                 to={item.path}
                 className={`nav-link ${isActive ? 'active' : ''}`}
                 title={collapsed ? item.label : undefined}
+                onClick={onClose}
               >
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-text">{item.label}</span>
@@ -102,7 +107,11 @@ const Sidebar = ({ collapsed, role }) => {
         <Link
           to="/login"
           className="nav-link logout-link"
-          onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); }}
+          onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            onClose?.();
+          }}
           title={collapsed ? 'Sign Out' : undefined}
         >
           <span className="nav-icon" style={{ color: 'var(--danger)' }}><LogOut size={18} /></span>

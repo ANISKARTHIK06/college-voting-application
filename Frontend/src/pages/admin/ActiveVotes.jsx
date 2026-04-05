@@ -1,4 +1,4 @@
-﻿import API_BASE_URL from '@/config/api';
+import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -138,7 +138,7 @@ const ActiveVotes = () => {
             </div>
 
             <div className="dashboard-card glass-panel animate-slideUp" style={{ padding:'0' }}>
-                <div style={{ overflowX:'auto' }}>
+                <div className="table-scroll-container" style={{ overflowX:'auto' }}>
                     <table style={{ width:'100%', borderCollapse:'collapse', textAlign:'left' }}>
                         <thead>
                             <tr style={{ borderBottom:'1px solid var(--border)' }}>
