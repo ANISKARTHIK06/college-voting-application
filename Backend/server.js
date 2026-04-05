@@ -24,6 +24,7 @@ app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/announcements", require("./routes/announcementRoutes"));
 app.use("/api/activity", require("./routes/activityRoutes"));
 app.use("/api/candidates", require("./routes/candidateRoutes"));
+app.use("/api/election-requests", require("./routes/electionRequestRoutes"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

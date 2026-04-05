@@ -6,18 +6,21 @@ const jwt = require("jsonwebtoken");
 // @access  Public
 exports.register = async (req, res) => {
     try {
-        const { name, email, password, role, userType, department, position } = req.body;
+        const { name, email, registerNumber, password, role, userType, department, position } = req.body;
 
-        // Check if user exists
-        const userExists = await User.findOne({ email });
+        // Check if user exists by email or register number
+        const userExists = await User.findOne({ 
+            $or: [{ email }, { registerNumber }] 
+        });
         if (userExists) {
-            return res.status(409).json({ message: "An account with this email address already exists." });
+            return res.status(409).json({ message: "An account with this email address or register number already exists." });
         }
 
         // Create user
         const user = await User.create({
             name,
             email,
+            registerNumber,
             password,
             role: role || "student", // Default to student if not specified
             userType: userType || "student", // Default to student
@@ -30,6 +33,7 @@ exports.register = async (req, res) => {
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                registerNumber: user.registerNumber,
                 role: user.role,
                 userType: user.userType,
                 department: user.department,
@@ -47,23 +51,28 @@ exports.register = async (req, res) => {
 // @access  Public
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body; // 'email' field acts as email or registerNumber
 
         // Validate input
         if (!email || !password) {
-            console.log("Login failed: missing email or password");
+            console.log("Login failed: missing email/register number or password");
             return res.status(400).json({
-                message: "Please provide both email and password",
+                message: "Please provide both email/register number and password",
                 received: { email: !!email, password: !!password }
             });
         }
 
-        console.log(`Login attempt for email: "${email}", password length: ${password.length}`);
+        console.log(`Login attempt for identifier: "${email}", password length: ${password.length}`);
 
-        // Check for user email (case-insensitive)
-        const user = await User.findOne({ email: { $regex: new RegExp('^' + email.trim() + '$', 'i') } }).select("+password");
+        // Check for user email or register number (case-insensitive for email)
+        const user = await User.findOne({ 
+            $or: [
+                { email: { $regex: new RegExp('^' + email.trim() + '$', 'i') } },
+                { registerNumber: email.trim() }
+            ] 
+        }).select("+password");
         
-        if (!user) console.log(`User not found for email: "${email}"`);
+        if (!user) console.log(`User not found for identifier: "${email}"`);
         else console.log(`User found. Checking password...`);
 
         if (user && (await user.matchPassword(password))) {
@@ -72,6 +81,7 @@ exports.login = async (req, res) => {
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                registerNumber: user.registerNumber,
                 role: user.role,
                 userType: user.userType,
                 department: user.department,

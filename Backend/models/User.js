@@ -15,6 +15,11 @@ const userSchema = new mongoose.Schema({
             "Please add a valid email",
         ],
     },
+    registerNumber: {
+        type: String,
+        required: [true, "Please add a register number"],
+        unique: true,
+    },
     password: {
         
         type: String,

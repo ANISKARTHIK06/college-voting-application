@@ -1,237 +1,392 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import StatCard from '../../components/shared/StatCard';
-import '../../styles/Dashboard.css';
+import {
+    Trophy, BarChart2, Globe, Clock, CheckCircle,
+    Medal, Users, TrendingUp, Star, Award, Filter
+} from 'lucide-react';
 
-const VoteResults = () => {
-    const [votes, setVotes] = useState([]);
-    const [resultsData, setResultsData] = useState({}); // { voteId: { results, totalVotes, vote } }
-    const [loading, setLoading] = useState(true);
-    const [filters, setFilters] = useState({
-        department: 'All',
-        type: 'All',
-        year: 'All'
-    });
+const API = 'http://localhost:5000/api';
+
+/* ─── helpers ─── */
+const getInitials = n => n ? n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) : '?';
+
+/* Animated bar that fills only when visible */
+function AnimatedBar({ pct, color, delay = 0 }) {
+    const ref  = useRef(null);
+    const [w, setW] = useState(0);
 
     useEffect(() => {
-        const fetchAllData = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                const votesRes = await axios.get('http://localhost:5000/api/votes', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                
-                const publishedVotes = votesRes.data.filter(v => v.status === 'published' || v.status === 'ended');
-                setVotes(publishedVotes);
-
-                // Fetch results for each published vote
-                const resultsPromises = publishedVotes.map(v => 
-                    axios.get(`http://localhost:5000/api/votes/${v._id}/results`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    }).catch(err => null)
-                );
-
-                const resultsResponses = await Promise.all(resultsPromises);
-                const resultsMap = {};
-                resultsResponses.forEach((res, index) => {
-                    if (res && res.data) {
-                        resultsMap[publishedVotes[index]._id] = res.data;
-                    }
-                });
-                setResultsData(resultsMap);
-            } catch (error) {
-                console.error('Failed to fetch results dashboard data');
-            } finally {
-                setLoading(false);
+        const el = ref.current;
+        if (!el) return;
+        const obs = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) {
+                setTimeout(() => setW(pct), delay);
+                obs.disconnect();
             }
-        };
-        fetchAllData();
-    }, []);
-
-    const calculateWinner = (voteId) => {
-        const data = resultsData[voteId];
-        if (!data || !data.vote.candidates.length) return null;
-        
-        return data.vote.candidates.reduce((prev, current) => {
-            const currentVotes = data.results[current._id] || 0;
-            const prevVotes = data.results[prev?._id] || 0;
-            return currentVotes > prevVotes ? current : prev;
-        }, data.vote.candidates[0]);
-    };
-
-    const filteredVotes = votes.filter(v => {
-        const matchDept = filters.department === 'All' || v.eligibleGroup === filters.department;
-        const matchType = filters.type === 'All' || v.votingType === filters.type;
-        const matchYear = filters.year === 'All' || new Date(v.endTime).getFullYear().toString() === filters.year;
-        return matchDept && matchType && matchYear;
-    });
-
-    if (loading) {
-        return (
-            <div className="loader-wrapper">
-                <div className="loader-spinner"></div>
-                <p className="loader-text">Aggregating historical governance data...</p>
-            </div>
-        );
-    }
+        }, { threshold: 0.3 });
+        obs.observe(el);
+        return () => obs.disconnect();
+    }, [pct, delay]);
 
     return (
-        <div className="vote-results-page">
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">Governance Outcomes</h1>
-                    <p className="page-subtitle">Certified election tallies and institutional records</p>
-                </div>
-            </div>
-
-            {/* Filters Section */}
-            <div className="dashboard-card glass-panel" style={{ marginBottom: '32px', padding: '20px' }}>
-                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>DEPARTMENT</label>
-                        <select 
-                            className="form-input" 
-                            style={{ padding: '10px' }}
-                            value={filters.department}
-                            onChange={(e) => setFilters({...filters, department: e.target.value})}
-                        >
-                            <option>All</option>
-                            <option>Computer Science</option>
-                            <option>Engineering</option>
-                            <option>Arts & Humanities</option>
-                            <option>Business Admin</option>
-                        </select>
-                    </div>
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>ELECTION TYPE</label>
-                        <select 
-                            className="form-input" 
-                            style={{ padding: '10px' }}
-                            value={filters.type}
-                            onChange={(e) => setFilters({...filters, type: e.target.value})}
-                        >
-                            <option>All</option>
-                            <option>Election</option>
-                            <option>Approval</option>
-                            <option>Ranked</option>
-                        </select>
-                    </div>
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>ACADEMIC YEAR</label>
-                        <select 
-                            className="form-input" 
-                            style={{ padding: '10px' }}
-                            value={filters.year}
-                            onChange={(e) => setFilters({...filters, year: e.target.value})}
-                        >
-                            <option>All</option>
-                            <option>2026</option>
-                            <option>2025</option>
-                            <option>2024</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div className="results-stack" style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
-                {filteredVotes.length > 0 ? filteredVotes.map((vote, i) => {
-                    const data = resultsData[vote._id];
-                    const winner = calculateWinner(vote._id);
-                    const winnerCount = data ? data.results[winner?._id || ''] : 0;
-                    const winnerPercent = data && data.totalVotes > 0 ? (winnerCount / data.totalVotes * 100).toFixed(1) : 0;
-
-                    return (
-                        <div key={vote._id} className="result-dashboard-item animate-slideUp" style={{ animationDelay: `${i * 0.1}s` }}>
-                            <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
-                                {/* Left Side: Winner Highlight */}
-                                <div className="dashboard-card glass-panel" style={{ background: 'var(--grad-primary)', color: 'white', position: 'relative', overflow: 'hidden' }}>
-                                    <div style={{ position: 'absolute', top: '20px', right: '20px', fontSize: '3rem', opacity: 0.2 }}>🏆</div>
-                                    <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', marginBottom: '24px' }}>CERTIFIED WINNER</span>
-                                    <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                                        <div className="winner-avatar" style={{ width: '100px', height: '100px', borderRadius: '24px', background: 'white', color: 'var(--primary)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: 800, border: '4px solid rgba(255,255,255,0.3)' }}>
-                                            {winner?.name[0]}
-                                        </div>
-                                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>{winner?.name}</h2>
-                                        <p style={{ fontSize: '0.9rem', opacity: 0.9 }}>{winnerPercent}% of total mandates</p>
-                                    </div>
-                                    <div style={{ paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.2)', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                        <div>
-                                            <div style={{ opacity: 0.7 }}>TOTAL VOTEST</div>
-                                            <div style={{ fontWeight: 700 }}>{data?.totalVotes || 0}</div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ opacity: 0.7 }}>STATUS</div>
-                                            <div style={{ fontWeight: 700 }}>PUBLISHED</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Right Side: Visual Analytics */}
-                                <div className="dashboard-card glass-panel" style={{ padding: '32px' }}>
-                                    <div style={{ marginBottom: '32px' }}>
-                                        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>{vote.title}</h3>
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{vote.votingType} • {vote.eligibleGroup} • {new Date(vote.endTime).getFullYear()}</p>
-                                    </div>
-
-                                    <div className="results-visualization">
-                                        {vote.candidates.map((candidate) => {
-                                            const count = data ? data.results[candidate._id] || 0 : 0;
-                                            const percent = data && data.totalVotes > 0 ? (count / data.totalVotes * 100) : 0;
-                                            const isWinner = winner?._id === candidate._id;
-
-                                            return (
-                                                <div key={candidate._id} className="result-bar-row" style={{ marginBottom: '28px' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.9rem' }}>
-                                                        <span style={{ fontWeight: 600, color: isWinner ? 'var(--primary)' : 'var(--text-main)' }}>
-                                                            {candidate.name} {isWinner && '👑'}
-                                                        </span>
-                                                        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>{count} votes ({percent.toFixed(1)}%)</span>
-                                                    </div>
-                                                    <div style={{ height: '12px', background: 'var(--border-subtle)', borderRadius: '10px', overflow: 'hidden' }}>
-                                                        <div 
-                                                            className="animate-bar"
-                                                            style={{ 
-                                                                width: `${percent}%`, 
-                                                                height: '100%', 
-                                                                background: isWinner ? 'var(--grad-primary)' : 'var(--border)',
-                                                                borderRadius: '10px',
-                                                                transition: 'width 2s cubic-bezier(0.1, 0, 0, 1)'
-                                                            }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-
-                                    <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                                        <div className="glass-card" style={{ padding: '12px', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Participation</div>
-                                            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)' }}>84.2%</div>
-                                        </div>
-                                        <div className="glass-card" style={{ padding: '12px', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Margin</div>
-                                            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--secondary)' }}>12.4%</div>
-                                        </div>
-                                        <div className="glass-card" style={{ padding: '12px', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Audited</div>
-                                            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--success)' }}>100%</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                }) : (
-                    <div className="empty-state">
-                        <div className="empty-state-icon">📂</div>
-                        <p className="empty-state-text">No archived results found matching your current filters.</p>
-                        <button className="btn btn-secondary btn-sm" onClick={() => setFilters({ department: 'All', type: 'All', year: 'All' })}>Reset Filters</button>
-                    </div>
-                )}
-            </div>
+        <div ref={ref} style={{
+            height: 10, background: 'var(--bg-main)', borderRadius: 20,
+            overflow: 'hidden', border: '1px solid var(--border)'
+        }}>
+            <div style={{
+                height: '100%', width: `${w}%`, background: color,
+                borderRadius: 20, transition: 'width 1.4s cubic-bezier(0.1,0,0,1)'
+            }} />
         </div>
     );
+}
+
+const VoteResults = () => {
+    const [votes, setVotes]             = useState([]);
+    const [resultsData, setResultsData] = useState({});
+    const [loading, setLoading]         = useState(true);
+    const [activeCard, setActiveCard]   = useState(null); // expanded election id
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const h     = { headers: { Authorization: `Bearer ${token}` } };
+                const vRes  = await axios.get(`${API}/votes`, h);
+                const done  = vRes.data.filter(v => v.status === 'ended' || v.status === 'published');
+                setVotes(done);
+                if (done.length > 0) setActiveCard(done[0]._id);
+
+                const map = {};
+                await Promise.all(done.map(async v => {
+                    try {
+                        const r = await axios.get(`${API}/votes/${v._id}/results`, h);
+                        map[v._id] = r.data;
+                    } catch {}
+                }));
+                setResultsData(map);
+            } catch {}
+            finally { setLoading(false); }
+        };
+        load();
+    }, []);
+
+    /* rank candidates for a given vote */
+    const getRanked = (voteId) => {
+        const d = resultsData[voteId];
+        if (!d) return [];
+        const candidates = d.vote?.candidates || [];
+        return [...candidates]
+            .map(c => ({ ...c, count: d.results[c._id] || 0 }))
+            .sort((a, b) => b.count - a.count);
+    };
+
+    const getTotal   = id => resultsData[id]?.totalVotes || 0;
+    const getPct     = (id, cnt) => { const t = getTotal(id); return t > 0 ? (cnt / t * 100) : 0; };
+    const getMargin  = (id) => {
+        const ranked = getRanked(id);
+        if (ranked.length < 2) return '—';
+        const t = getTotal(id);
+        return t > 0 ? `${((ranked[0].count - ranked[1].count) / t * 100).toFixed(1)}%` : '—';
+    };
+
+    const filtered = votes;
+
+    /* Bar colors: 1st gold, 2nd silver, 3rd bronze, rest primary shades */
+    const BAR_COLORS = [
+        'linear-gradient(90deg,#f59e0b,#fbbf24)',
+        'linear-gradient(90deg,#94a3b8,#cbd5e1)',
+        'linear-gradient(90deg,#b45309,#d97706)',
+        'linear-gradient(90deg,#6366f1,#8b5cf6)',
+        'linear-gradient(90deg,#0891b2,#06b6d4)',
+        'linear-gradient(90deg,#10b981,#34d399)',
+    ];
+
+    const PODIUM_STYLE = [
+        { height: 110, bg: 'linear-gradient(160deg,#f59e0b,#fbbf24)', label: '🥇 1st', top: 0 },
+        { height: 80,  bg: 'linear-gradient(160deg,#64748b,#94a3b8)', label: '🥈 2nd', top: 30 },
+        { height: 60,  bg: 'linear-gradient(160deg,#92400e,#b45309)', label: '🥉 3rd', top: 50 },
+    ];
+
+    if (loading) return (
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'60vh', gap:16 }}>
+            <div style={{ width:44, height:44, border:'3px solid var(--border)', borderTopColor:'#f59e0b', borderRadius:'50%', animation:'spin-vr 0.8s linear infinite' }} />
+            <p style={{ color:'var(--text-muted)', fontWeight:600 }}>Loading election results…</p>
+            <style>{`@keyframes spin-vr{to{transform:rotate(360deg)}}`}</style>
+        </div>
+    );
+
+    return (
+        <>
+        <style>{`
+            .vr-page { min-height:100vh; background:var(--bg-main); padding:32px; }
+            @media(max-width:900px){ .vr-page{ padding:20px; } }
+
+            /* ── Header ── */
+            .vr-hero { position:relative; background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(168,85,247,0.05)); border:1px solid var(--border); border-radius:24px; padding:36px 40px; margin-bottom:28px; overflow:hidden; }
+            .vr-hero::before { content:''; position:absolute; right:-60px; top:-60px; width:260px; height:260px; border-radius:50%; background:radial-gradient(circle,rgba(99,102,241,0.12),transparent 70%); pointer-events:none; }
+            .vr-hero-title { font-size:2.2rem; font-weight:900; font-family:var(--font-heading); letter-spacing:-0.04em; background:linear-gradient(135deg,var(--primary),var(--secondary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+            .vr-hero-sub { font-size:0.9rem; color:var(--text-muted); margin-top:6px; max-width:560px; line-height:1.6; }
+            .vr-hero-stats { display:flex; gap:24px; margin-top:20px; flex-wrap:wrap; }
+            .vr-hs { display:flex; align-items:center; gap:8px; }
+            .vr-hs-val { font-size:1.25rem; font-weight:800; color:var(--text-main); font-family:var(--font-heading); }
+            .vr-hs-lbl { font-size:0.72rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+
+            /* ── Type tabs ── */
+            .vr-tabs { display:flex; gap:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:5px; margin-bottom:24px; flex-wrap:wrap; }
+            .vr-tab { padding:8px 18px; border-radius:10px; font-size:0.8rem; font-weight:700; border:none; background:transparent; color:var(--text-muted); cursor:pointer; transition:all 0.15s; }
+            .vr-tab.active { background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; box-shadow:0 2px 12px rgba(99,102,241,0.35); }
+            .vr-tab:hover:not(.active) { color:var(--text-main); background:var(--bg-main); }
+
+            /* ── Election list ── */
+            .vr-list { display:flex; flex-direction:column; gap:6px; width:280px; flex-shrink:0; }
+            .vr-list-item { padding:14px 18px; border-radius:14px; border:1.5px solid var(--border); background:var(--bg-card); cursor:pointer; transition:all 0.18s; }
+            .vr-list-item:hover { border-color:rgba(99,102,241,0.35); }
+            .vr-list-item.active { border-color:var(--primary); background:rgba(99,102,241,0.06); box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
+            .vr-list-title { font-size:0.88rem; font-weight:700; color:var(--text-main); margin-bottom:4px; }
+            .vr-list-meta { font-size:0.7rem; color:var(--text-muted); display:flex; gap:6px; flex-wrap:wrap; }
+            .vr-tag { font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; padding:2px 8px; border-radius:5px; }
+
+            /* ── Two-panel layout ── */
+            .vr-layout { display:flex; gap:20px; align-items:flex-start; }
+            @media(max-width:850px){ .vr-layout{ flex-direction:column; } .vr-list{ width:100%; flex-direction:row; overflow-x:auto; } }
+
+            /* ── Detail panel ── */
+            .vr-detail { flex:1; min-width:0; display:flex; flex-direction:column; gap:16px; }
+
+            /* Winner Hero card */
+            .vr-winner-hero { border-radius:22px; overflow:hidden; border:1px solid var(--border); }
+            .vr-wh-top { padding:28px 32px; background:linear-gradient(135deg,#6366f1,#a855f7,#06b6d4); position:relative; display:flex; gap:24px; align-items:center; }
+            .vr-wh-top::before { content:''; position:absolute; inset:0; background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='30'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+            .vr-wh-av { width:90px; height:90px; border-radius:22px; background:rgba(255,255,255,0.2); border:3px solid rgba(255,255,255,0.35); display:flex; align-items:center; justify-content:center; font-size:2.2rem; font-weight:900; color:white; flex-shrink:0; backdrop-filter:blur(8px); z-index:1; }
+            .vr-wh-info { z-index:1; }
+            .vr-wh-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.18); color:white; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; padding:4px 12px; border-radius:20px; margin-bottom:8px; backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.2); }
+            .vr-wh-name { font-size:1.5rem; font-weight:900; color:white; margin-bottom:4px; }
+            .vr-wh-pct { font-size:2.4rem; font-weight:900; color:white; line-height:1; font-family:var(--font-heading); }
+            .vr-wh-pct-lbl { font-size:0.72rem; color:rgba(255,255,255,0.7); font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
+            .vr-wh-mini-stats { display:flex; gap:0; background:var(--bg-card); border-top:1px solid var(--border); }
+            .vr-wh-mini-stat { flex:1; padding:14px 0; text-align:center; border-right:1px solid var(--border); }
+            .vr-wh-mini-stat:last-child { border-right:none; }
+            .vr-wh-mini-val { font-size:1.1rem; font-weight:800; color:var(--text-main); font-family:var(--font-heading); }
+            .vr-wh-mini-lbl { font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-top:2px; }
+
+            /* Podium */
+            .vr-podium-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:22px; padding:28px; }
+            .vr-podium-title { font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:20px; display:flex; align-items:center; gap:6px; }
+            .vr-podium { display:flex; gap:14px; align-items:flex-end; justify-content:center; height:200px; }
+            .vr-podium-col { display:flex; flex-direction:column; align-items:center; gap:8px; flex:1; max-width:130px; }
+            .vr-podium-name { font-size:0.78rem; font-weight:700; color:var(--text-main); text-align:center; line-height:1.3; }
+            .vr-podium-pct { font-size:0.72rem; color:var(--text-muted); font-weight:600; }
+            .vr-podium-bar { width:100%; border-radius:12px 12px 0 0; display:flex; align-items:flex-start; justify-content:center; padding-top:10px; transition:height 1.2s cubic-bezier(0.1,0,0,1); }
+            .vr-podium-place { font-size:1.1rem; font-weight:900; color:white; }
+
+            /* Detailed bars */
+            .vr-bars-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:22px; padding:28px; }
+            .vr-bars-title { font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:20px; display:flex; align-items:center; gap:6px; }
+            .vr-bar-row { display:flex; gap:14px; align-items:center; margin-bottom:18px; }
+            .vr-bar-rank { width:22px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:900; color:white; flex-shrink:0; }
+            .vr-bar-left { flex:1; min-width:0; }
+            .vr-bar-namerow { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+            .vr-bar-name { font-size:0.88rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:6px; }
+            .vr-bar-stat { font-size:0.75rem; font-weight:700; color:var(--text-muted); white-space:nowrap; }
+
+            /* empty */
+            .vr-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; background:var(--bg-card); border:2px dashed var(--border); border-radius:24px; }
+        `}</style>
+
+        <div className="vr-page">
+
+            {/* Hero */}
+            <div className="vr-hero">
+                <h1 className="vr-hero-title">🏆 Election Results</h1>
+                <p className="vr-hero-sub">
+                    Certified results for all concluded elections. Data is tallied live from the database.
+                </p>
+                <div className="vr-hero-stats">
+                    {[
+                        { label:'Concluded', value: votes.length,         icon: CheckCircle, color:'#10b981' },
+                        { label:'Total Votes Cast', value: Object.values(resultsData).reduce((s,d)=>s+(d?.totalVotes||0),0), icon: Users, color:'#a855f7' },
+                    ].map(({ label, value, icon: Icon, color }) => (
+                        <div className="vr-hs" key={label}>
+                            <div style={{ width:34, height:34, borderRadius:10, background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                <Icon size={16} style={{ color }} />
+                            </div>
+                            <div>
+                                <div className="vr-hs-val">{value}</div>
+                                <div className="vr-hs-lbl">{label}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Election list */}
+
+            {/* Empty state */}
+            {filtered.length === 0 ? (
+                <div className="vr-empty">
+                    <div style={{ fontSize:'3.5rem' }}>📊</div>
+                    <p style={{ fontWeight:700, fontSize:'1.05rem', color:'var(--text-main)' }}>No Results Yet</p>
+                    <p style={{ color:'var(--text-muted)', fontSize:'0.85rem', maxWidth:340 }}>
+                        Elections appear here once they've ended. Active elections are on the <strong>Active Votes</strong> page.
+                    </p>
+                </div>
+            ) : (
+                <div className="vr-layout">
+                    {/* Left list */}
+                    <div className="vr-list">
+                        {filtered.map(vote => {
+                            const ranked = getRanked(vote._id);
+                            const winner = ranked[0];
+                            return (
+                                <div
+                                    key={vote._id}
+                                    className={`vr-list-item ${activeCard === vote._id ? 'active' : ''}`}
+                                    onClick={() => setActiveCard(vote._id)}
+                                >
+                                    <div className="vr-list-title">{vote.title}</div>
+                                    <div className="vr-list-meta">
+                                        {winner && <span style={{ fontSize:'0.72rem', color:'#10b981', fontWeight:700 }}>🏆 {winner.name}</span>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Right detail */}
+                    {activeCard && (() => {
+                        const vote   = filtered.find(v => v._id === activeCard);
+                        if (!vote) return null;
+                        const ranked = getRanked(activeCard);
+                        const total  = getTotal(activeCard);
+                        const winner = ranked[0];
+                        const winPct = winner ? getPct(activeCard, winner.count) : 0;
+                        const margin = getMargin(activeCard);
+
+                        return (
+                            <div className="vr-detail">
+                                {/* Election meta */}
+                                <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
+                                    <span style={{ fontWeight:800, color:'var(--text-main)', fontSize:'1.05rem' }}>{vote.title}</span>
+                                    <span className="vr-tag" style={
+                                        vote.status === 'published'
+                                            ? { background:'rgba(16,185,129,0.1)', color:'#10b981' }
+                                            : { background:'rgba(245,158,11,0.1)', color:'#f59e0b' }
+                                    }>{vote.status === 'published' ? '✅ Certified' : '⏳ Ended – Tallying'}</span>
+                                    <span style={{ marginLeft:'auto', fontSize:'0.75rem', color:'var(--text-muted)', display:'flex', alignItems:'center', gap:4 }}>
+                                        <Clock size={12} />Ended {new Date(vote.endTime).toLocaleDateString('en-IN',{ day:'numeric', month:'short', year:'numeric' })}
+                                    </span>
+                                </div>
+
+                                {/* Winner Hero */}
+                                {winner && total > 0 && (
+                                    <div className="vr-winner-hero">
+                                        <div className="vr-wh-top">
+                                            <div className="vr-wh-av">{getInitials(winner.name)}</div>
+                                            <div className="vr-wh-info">
+                                                <div className="vr-wh-badge"><Trophy size={11} /> WINNER</div>
+                                                <div className="vr-wh-name">{winner.name}</div>
+                                                <div className="vr-wh-pct">{winPct.toFixed(1)}%</div>
+                                                <div className="vr-wh-pct-lbl">of all votes</div>
+                                            </div>
+                                        </div>
+                                        <div className="vr-wh-mini-stats">
+                                            {[
+                                                { label:'Total Votes', val: total },
+                                                { label:'Winner Votes', val: winner.count },
+                                                { label:'Candidates', val: ranked.length },
+                                                { label:'Win Margin', val: margin },
+                                            ].map(({ label, val }) => (
+                                                <div className="vr-wh-mini-stat" key={label}>
+                                                    <div className="vr-wh-mini-val">{val}</div>
+                                                    <div className="vr-wh-mini-lbl">{label}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Podium (top 3) */}
+                                {ranked.length >= 2 && total > 0 && (
+                                    <div className="vr-podium-wrap">
+                                        <div className="vr-podium-title"><Award size={14} /> Podium — Top {Math.min(ranked.length, 3)}</div>
+                                        <div className="vr-podium">
+                                            {/* Reorder: 2nd, 1st, 3rd for visual podium shape */}
+                                            {[1, 0, 2].map(ri => {
+                                                const cand = ranked[ri];
+                                                if (!cand) return <div key={ri} style={{ flex:1 }} />;
+                                                const p = PODIUM_STYLE[ri];
+                                                const pct = getPct(activeCard, cand.count).toFixed(1);
+                                                return (
+                                                    <div className="vr-podium-col" key={cand._id}>
+                                                        <div className="vr-podium-name">{cand.name}</div>
+                                                        <div className="vr-podium-pct">{pct}%</div>
+                                                        <div className="vr-podium-bar" style={{
+                                                            height: p.height, background: p.bg,
+                                                            borderRadius: '12px 12px 0 0'
+                                                        }}>
+                                                            <div className="vr-podium-place">{p.label}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Animated bars — all candidates */}
+                                <div className="vr-bars-wrap">
+                                    <div className="vr-bars-title"><BarChart2 size={14} /> Full Vote Breakdown</div>
+                                    {ranked.length === 0 ? (
+                                        <p style={{ color:'var(--text-muted)', fontSize:'0.85rem', textAlign:'center', padding:'24px 0' }}>No candidates registered for this election.</p>
+                                    ) : ranked.map((c, ci) => {
+                                        const pct   = getPct(activeCard, c.count);
+                                        const color = BAR_COLORS[ci] || BAR_COLORS[BAR_COLORS.length - 1];
+                                        const rankColors = ['#f59e0b','#94a3b8','#b45309'];
+                                        const rankBg = rankColors[ci] || 'var(--primary)';
+                                        return (
+                                            <div className="vr-bar-row" key={c._id}>
+                                                <div className="vr-bar-rank" style={{ background: rankBg }}>
+                                                    {ci + 1}
+                                                </div>
+                                                <div className="vr-bar-left">
+                                                    <div className="vr-bar-namerow">
+                                                        <span className="vr-bar-name">
+                                                            {ci === 0 && <Trophy size={14} color="#f59e0b" />}
+                                                            {c.name}
+                                                        </span>
+                                                        <span className="vr-bar-stat">{c.count} votes · {pct.toFixed(1)}%</span>
+                                                    </div>
+                                                    <AnimatedBar pct={pct} color={color} delay={ci * 80} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {total === 0 && (
+                                        <p style={{ color:'var(--text-muted)', fontSize:'0.82rem', textAlign:'center', padding:'16px 0', fontStyle:'italic' }}>
+                                            No votes were cast in this election.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </div>
+            )}
+        </div>
+        </>
+    );
 };
+
+/* compile-time safe re-use of BAR_COLORS in outer scope */
+const BAR_COLORS = [
+    'linear-gradient(90deg,#f59e0b,#fbbf24)',
+    'linear-gradient(90deg,#94a3b8,#cbd5e1)',
+    'linear-gradient(90deg,#b45309,#d97706)',
+    'linear-gradient(90deg,#6366f1,#8b5cf6)',
+    'linear-gradient(90deg,#0891b2,#06b6d4)',
+    'linear-gradient(90deg,#10b981,#34d399)',
+];
 
 export default VoteResults;

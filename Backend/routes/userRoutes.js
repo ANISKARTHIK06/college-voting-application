@@ -5,12 +5,20 @@ const {
     updateUserRole,
     getUserById,
     toggleUserStatus,
-    bulkImportUsers
+    bulkImportUsers,
+    searchUsers,
+    getAllStudents
 } = require("../controllers/userController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
-// All user routes are admin only
+// Protect all routes
 router.use(protect);
+
+// Allow any authenticated user to search or get students
+router.get("/search", searchUsers);
+router.get("/students", getAllStudents);
+
+// The rest are admin only
 router.use(authorize("admin"));
 
 router.get("/", getAllUsers);

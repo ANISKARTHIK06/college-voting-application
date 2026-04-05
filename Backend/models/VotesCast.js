@@ -14,8 +14,6 @@ const votesCastSchema = new mongoose.Schema({
     candidateId: {
         type: String, // Or ObjectId if we want to ref candidates specifically
     },
-    rankings: [String], // For Ranked voting
-    selections: [String], // For Approval/Weighted voting
     timestamp: {
         type: Date,
         default: Date.now,

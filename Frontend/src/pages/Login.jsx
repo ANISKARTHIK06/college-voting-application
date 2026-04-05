@@ -57,13 +57,13 @@ function Login() {
                     {error && <div className="error-box">{error}</div>}
 
                     <div className="form-group">
-                        <label className="form-label" htmlFor="email">Work Email</label>
+                        <label className="form-label" htmlFor="email">Work Email or Register Number</label>
                         <input
-                            type="email"
+                            type="text"
                             id="email"
                             name="email"
                             className="form-input"
-                            placeholder="name@college.edu"
+                            placeholder="name@college.edu or 12345678"
                             value={formData.email}
                             onChange={handleChange}
                             required

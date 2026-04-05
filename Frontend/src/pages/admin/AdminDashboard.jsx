@@ -71,6 +71,60 @@ const AdminDashboard = () => {
 
       <ControlPanel />
 
+      {/* ── Latest Notices Banner ── */}
+      <div className="glass-panel animate-slideUp" style={{ margin: '24px 0', padding: '20px 24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Megaphone size={18} style={{ color: 'var(--primary)' }} />
+            <h3 className="section-title" style={{ margin: 0 }}>Latest Notices</h3>
+            {announcements.length > 0 && (
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.1)', color: 'var(--primary)' }}>
+                {announcements.length} new
+              </span>
+            )}
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin/announcements')}>View All →</button>
+        </div>
+
+        {loading ? (
+          <p className="text-muted" style={{ fontSize: '0.85rem' }}>Loading notices...</p>
+        ) : announcements.length === 0 ? (
+          <p className="text-muted text-center" style={{ padding: '12px 0', fontSize: '0.875rem' }}>No active notices.</p>
+        ) : (
+          <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {announcements.map((a, i) => (
+              <div
+                key={i}
+                className="glass-card"
+                style={{
+                  minWidth: '280px', maxWidth: '320px', padding: '16px',
+                  borderLeft: `4px solid ${a.priority === 'Important' ? 'var(--danger)' : 'var(--primary)'}`,
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{
+                    fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em',
+                    padding: '2px 8px', borderRadius: 6,
+                    background: a.priority === 'Important' ? 'rgba(239,68,68,0.12)' : 'rgba(99,102,241,0.1)',
+                    color: a.priority === 'Important' ? 'var(--danger)' : 'var(--primary)',
+                  }}>
+                    {a.priority}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    {new Date(a.publishDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+                <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.875rem', marginBottom: '4px' }}>{a.title}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {a.description}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <AnalyticsSection />
 
       <div className="dashboard-grid">
@@ -138,26 +192,19 @@ const AdminDashboard = () => {
           </div>
 
           <div className="dashboard-card glass-panel animate-slideUp" style={{ animationDelay: '0.4s', marginTop: '32px' }}>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="section-title">Latest Notices</h3>
-              <Megaphone size={18} className="text-muted" />
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="section-title">Quick Actions</h3>
+              <Zap size={18} className="text-muted" />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {announcements.map((a, i) => (
-                <div key={i} className="glass-card" style={{ padding: '16px' }}>
-                  <div className="flex justify-between items-start mb-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${a.priority === 'Important' ? 'bg-danger text-white' : 'bg-primary-light text-primary'}`}>
-                      {a.priority}
-                    </span>
-                    <span className="text-[10px] text-muted">{new Date(a.publishDate).toLocaleDateString()}</span>
-                  </div>
-                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.85rem' }}>{a.title}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }} className="truncate">{a.description}</div>
-                </div>
-              ))}
-              {announcements.length === 0 && <p className="text-muted text-center py-4">No notices published</p>}
-              <button className="btn btn-secondary btn-auth" style={{ width: '100%', margin: 0 }} onClick={() => navigate('/admin/announcements')}>
-                Manage Broadcasts
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/admin/announcements')}>
+                📢 Publish Announcement
+              </button>
+              <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/admin/alerts')}>
+                🔔 Send Notification
+              </button>
+              <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/admin/activity')}>
+                📋 View Full Activity Log
               </button>
             </div>
           </div>

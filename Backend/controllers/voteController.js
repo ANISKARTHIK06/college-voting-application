@@ -37,14 +37,93 @@ exports.createVote = async (req, res) => {
 // @access  Private
 exports.getVotes = async (req, res) => {
     try {
+        const now = new Date();
+
+        // 1. Any vote whose end time has passed should be "ended"
+        await Vote.updateMany(
+            { status: { $in: ["draft", "active"] }, endTime: { $lte: now } },
+            { $set: { status: "ended" } }
+        );
+
+        // 2. Any "draft" vote whose start time has passed and end time has not passed should be "active"
+        await Vote.updateMany(
+            { status: "draft", startTime: { $lte: now }, endTime: { $gt: now } },
+            { $set: { status: "active" } }
+        );
+
+        // 3. Any "active" vote whose start time is in the future should be reversed to "draft"
+        await Vote.updateMany(
+            { status: "active", startTime: { $gt: now } },
+            { $set: { status: "draft" } }
+        );
+
         let query = {};
 
         // If not admin, filter by status and eligibility
         if (req.user.role !== "admin") {
-            query.status = { $in: ["active", "published"] };
-            // Add eligibility check here if needed (e.g., department match)
+            const user = req.user;
+            console.log('DEBUG: User Role:', user.role);
+            console.log('DEBUG: User Type:', user.userType);
+            console.log('DEBUG: User Dept:', user.department);
+            console.log('DEBUG: User Pos:', user.position);
+            
+            query.status = { $in: ["active", "ended", "published"] };
+            
+            // Audience filtering logic: Only show what matches the user's profile
+            const conditions = [
+                { eligibleGroup: "All Users" }
+            ];
+
+            if (user.userType === 'staff') {
+                conditions.push({ eligibleGroup: "Staff Only" });
+
+                if (user.department) {
+                    conditions.push({ 
+                        eligibleGroup: "Staff Department", 
+                        eligibleValues: user.department 
+                    });
+                }
+
+                if (user.position) {
+                    conditions.push({ 
+                        eligibleGroup: "Staff Position", 
+                        eligibleValues: user.position 
+                    });
+                }
+
+                if (user.department && user.position) {
+                    conditions.push({
+                        eligibleGroup: "Staff Department & Position",
+                        eligibleValues: { $all: [user.department, user.position] }
+                    });
+                }
+            } else if (user.userType === 'student') {
+                if (user.department) {
+                    conditions.push({ 
+                        eligibleGroup: "Department", 
+                        eligibleValues: user.department 
+                    });
+                }
+
+                if (user.position) {
+                    conditions.push({ 
+                        eligibleGroup: "Year", 
+                        eligibleValues: user.position 
+                    });
+                }
+
+                if (user.department && user.position) {
+                    conditions.push({
+                        eligibleGroup: "Department & Year",
+                        eligibleValues: { $all: [user.department, user.position] }
+                    });
+                }
+            }
+
+            query.$or = conditions;
         }
 
+        console.log('DEBUG: Final Query:', JSON.stringify(query, null, 2));
         const votes = await Vote.find(query).sort("-createdAt");
         res.json(votes);
     } catch (error) {
@@ -57,6 +136,22 @@ exports.getVotes = async (req, res) => {
 // @access  Private
 exports.getVoteById = async (req, res) => {
     try {
+        const now = new Date();
+
+        // Auto-update status for this specific vote before fetching
+        await Vote.updateMany(
+            { _id: req.params.id, status: { $in: ["draft", "active"] }, endTime: { $lte: now } },
+            { $set: { status: "ended" } }
+        );
+        await Vote.updateMany(
+            { _id: req.params.id, status: "draft", startTime: { $lte: now }, endTime: { $gt: now } },
+            { $set: { status: "active" } }
+        );
+        await Vote.updateMany(
+            { _id: req.params.id, status: "active", startTime: { $gt: now } },
+            { $set: { status: "draft" } }
+        );
+
         const vote = await Vote.findById(req.params.id);
         if (!vote) return res.status(404).json({ message: "Vote not found" });
 
@@ -93,14 +188,12 @@ exports.castVote = async (req, res) => {
             return res.status(400).json({ message: "You have already cast your vote for this event" });
         }
 
-        const { candidateId, rankings, selections } = req.body;
+        const { candidateId } = req.body;
 
         await VotesCast.create({
             voteId: vote._id,
             userId: req.user._id,
             candidateId,
-            rankings,
-            selections,
         });
 
         res.status(201).json({ message: "Vote cast successfully" });
@@ -120,8 +213,8 @@ exports.getResults = async (req, res) => {
         const vote = await Vote.findById(req.params.id);
         if (!vote) return res.status(404).json({ message: "Vote not found" });
 
-        // Results only published after it ends (or for admin)
-        if (vote.status !== "published" && req.user.role !== "admin") {
+        // Results visible when published OR when ended (for all), or always for admin
+        if (vote.status !== "published" && vote.status !== "ended" && req.user.role !== "admin") {
             return res.status(403).json({ message: "Results are not yet published" });
         }
 
@@ -193,6 +286,77 @@ exports.updateVoteStatus = async (req, res) => {
         }
 
         res.json(vote);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get list of users who voted in a specific election
+// @route   GET /api/votes/:id/voters
+// @access  Private/Admin
+exports.getVoters = async (req, res) => {
+    try {
+        const votesCast = await VotesCast.find({ voteId: req.params.id })
+            .populate('userId', 'name email department role')
+            .sort('-createdAt');
+
+        const voters = votesCast.map(v => ({
+            _id:         v._id,
+            user:        v.userId,
+            candidateId: v.candidateId,
+            votedAt:     v.timestamp,
+        }));
+
+        res.json({ total: voters.length, voters });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get personal voting history for logged-in user
+// @route   GET /api/votes/my-history
+// @access  Private
+exports.getMyHistory = async (req, res) => {
+    try {
+        const now = new Date();
+        await Vote.updateMany(
+            { status: { $in: ["draft", "active"] }, endTime: { $lte: now } },
+            { $set: { status: "ended" } }
+        );
+        await Vote.updateMany(
+            { status: "draft", startTime: { $lte: now }, endTime: { $gt: now } },
+            { $set: { status: "active" } }
+        );
+        await Vote.updateMany(
+            { status: "active", startTime: { $gt: now } },
+            { $set: { status: "draft" } }
+        );
+
+        const votesCast = await VotesCast.find({ userId: req.user._id })
+            .populate('voteId')
+            .sort('-timestamp');
+
+        const history = votesCast
+            .filter(v => v.voteId)   // skip orphan records
+            .map(v => {
+                const vote     = v.voteId;
+                const candidate = vote.candidates.find(
+                    c => c._id.toString() === (v.candidateId || '').toString()
+                );
+                return {
+                    voteId:      vote._id,
+                    title:       vote.title,
+                    description: vote.description,
+                    eligibleGroup: vote.eligibleGroup,
+                    status:      vote.status,
+                    endTime:     vote.endTime,
+                    votedAt:     v.timestamp,
+                    votedFor:    candidate || null,
+                    candidates:  vote.candidates,
+                };
+            });
+
+        res.json(history);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -1,14 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
-import { 
-  LayoutDashboard, 
-  Vote, 
-  Users, 
-  LineChart, 
-  Megaphone, 
-  Settings, 
-  Clock, 
-  CheckCircle, 
+import {
+  LayoutDashboard,
+  Vote,
+  Users,
+  LineChart,
+  Megaphone,
+  Settings,
+  Clock,
+  CheckCircle,
   UserCircle,
   Bell,
   RefreshCw,
@@ -19,10 +19,13 @@ import {
 const adminItems = [
   { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={18} />, section: 'OVERVIEW' },
   { label: 'Elections', path: '/admin/active-votes', icon: <Vote size={18} />, section: 'GOVERNANCE' },
+  { label: 'Election Requests', path: '/admin/election-requests', icon: <RefreshCw size={18} /> },
   { label: 'Users', path: '/admin/users', icon: <Users size={18} /> },
   { label: 'Announcements', path: '/admin/announcements', icon: <Megaphone size={18} /> },
+
   { label: 'Activity Logs', path: '/admin/activity', icon: <ClipboardList size={18} /> },
   { label: 'Analytics', path: '/admin/analytics', icon: <LineChart size={18} />, section: 'REPORTS' },
+  { label: 'Profile', path: '/admin/profile', icon: <UserCircle size={18} />, section: 'ACCOUNT' },
 ];
 
 const facultyItems = [
@@ -40,6 +43,7 @@ const studentItems = [
   { label: 'Active Votes', path: '/student/active-votes', icon: <Vote size={18} />, section: 'VOTING' },
   { label: 'My History', path: '/student/history', icon: <RefreshCw size={18} /> },
   { label: 'Results', path: '/student/results', icon: <CheckCircle size={18} /> },
+  { label: 'Request Election', path: '/student/request-election', icon: <Clock size={18} /> },
   { label: 'Announcements', path: '/student/announcements', icon: <Megaphone size={18} />, section: 'COMMUNITY' },
   { label: 'Notifications', path: '/student/notifications', icon: <Bell size={18} /> },
   { label: 'Profile', path: '/student/profile', icon: <UserCircle size={18} />, section: 'ACCOUNT' },
@@ -75,7 +79,7 @@ const Sidebar = ({ collapsed, role }) => {
           const showSection = !collapsed && item.section && item.section !== lastSection;
           if (item.section) lastSection = item.section;
           const isActive = location.pathname === item.path;
-          
+
           return (
             <div key={index}>
               {showSection && (

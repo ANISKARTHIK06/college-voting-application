@@ -1,6 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+
+const DEPARTMENTS = [
+    "Agricultural Engineering",
+    "Artificial Intelligence and Data Science",
+    "Artificial Intelligence and Machine Learning",
+    "Biomedical Engineering",
+    "Biotechnology",
+    "Civil Engineering",
+    "Computer Science and Design",
+    "Computer Science and Engineering",
+    "Computer Technology",
+    "Electrical and Electronics Engineering",
+    "Electronics and Communication Engineering",
+    "Fashion Technology",
+    "Food Technology",
+    "Mechanical Engineering"
+];
+
+const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+
+const POSITIONS = [
+    "Associate Professor Level 1",
+    "Associate Professor Level 2",
+    "Associate Professor Level 3",
+    "HOD"
+];
 
 const CreateVote = () => {
     const navigate = useNavigate();
@@ -13,12 +39,46 @@ const CreateVote = () => {
         eligibleGroup: 'All Users',
         eligibleValues: [],
         startTime: '',
+        startTime: '',
         endTime: '',
-        candidates: [{ name: '', description: '' }]
+        candidates: [{ user: null, name: '', registerNumber: '', description: '' }]
     });
+    const [searchQueries, setSearchQueries] = useState(['']);
+
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData(prev => ({ 
+            ...prev, 
+            [name]: value,
+            // Reset eligibleValues if group changes
+            ...(name === 'eligibleGroup' ? { eligibleValues: [] } : {})
+        }));
+    };
+
+    const toggleEligibleValue = (val) => {
+        setFormData(prev => {
+            const current = [...prev.eligibleValues];
+            const index = current.indexOf(val);
+            if (index > -1) current.splice(index, 1);
+            else current.push(val);
+            return { ...prev, eligibleValues: current };
+        });
+    };
+
+    const selectAllValues = (valuesArray) => {
+        const allSelected = valuesArray.every(val => formData.eligibleValues.includes(val));
+        if (allSelected) {
+            setFormData(prev => ({
+                ...prev,
+                eligibleValues: prev.eligibleValues.filter(v => !valuesArray.includes(v))
+            }));
+        } else {
+            setFormData(prev => {
+                const newValues = new Set([...prev.eligibleValues, ...valuesArray]);
+                return { ...prev, eligibleValues: Array.from(newValues) };
+            });
+        }
     };
 
     const handleCandidateChange = (index, field, value) => {
@@ -28,19 +88,45 @@ const CreateVote = () => {
     };
 
     const addCandidate = () => {
-        setFormData({ ...formData, candidates: [...formData.candidates, { name: '', description: '' }] });
+        setFormData({ ...formData, candidates: [...formData.candidates, { user: null, name: '', registerNumber: '', description: '' }] });
+        setSearchQueries([...searchQueries, '']);
     };
 
     const removeCandidate = (index) => {
         const newCandidates = formData.candidates.filter((_, i) => i !== index);
         setFormData({ ...formData, candidates: newCandidates });
+        const newQueries = searchQueries.filter((_, i) => i !== index);
+        setSearchQueries(newQueries);
     };
 
     const handleSubmit = async () => {
+        let finalGroup = formData.eligibleGroup;
+        if (finalGroup === 'Department & Year') {
+            const hasDepts = formData.eligibleValues.some(v => DEPARTMENTS.includes(v));
+            const hasYears = formData.eligibleValues.some(v => YEARS.includes(v));
+            if (hasDepts && !hasYears) finalGroup = 'Department';
+            else if (!hasDepts && hasYears) finalGroup = 'Year';
+            else if (!hasDepts && !hasYears) {
+                alert('Please select at least one department or year for the targeted audience.');
+                return;
+            }
+        } else if (finalGroup === 'Staff Filtered') {
+            const hasDepts = formData.eligibleValues.some(v => DEPARTMENTS.includes(v));
+            const hasPositions = formData.eligibleValues.some(v => POSITIONS.includes(v));
+            if (hasDepts && !hasPositions) finalGroup = 'Staff Department';
+            else if (!hasDepts && hasPositions) finalGroup = 'Staff Position';
+            else if (hasDepts && hasPositions) finalGroup = 'Staff Department & Position';
+            else if (!hasDepts && !hasPositions) {
+                alert('Please select at least one department or position for the staff audience.');
+                return;
+            }
+        }
+
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5000/api/votes', formData, {
+            const submitData = { ...formData, eligibleGroup: finalGroup };
+            await axios.post('http://localhost:5000/api/votes', submitData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             navigate('/admin/active-votes');
@@ -143,24 +229,35 @@ const CreateVote = () => {
                                         <div className="form-grid-2">
                                             <div className="form-group">
                                                 <label className="form-label">Candidate {i + 1} Name</label>
-                                                <input 
-                                                    type="text" 
-                                                    className="form-input" 
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
                                                     value={c.name}
-                                                    placeholder="Enter name"
+                                                    placeholder="e.g. John Doe"
                                                     onChange={(e) => handleCandidateChange(i, 'name', e.target.value)}
                                                 />
                                             </div>
                                             <div className="form-group">
-                                                <label className="form-label">Tagline / Short Manifesto</label>
-                                                <input 
-                                                    type="text" 
-                                                    className="form-input" 
-                                                    value={c.description}
-                                                    placeholder="e.g. Innovation for All"
-                                                    onChange={(e) => handleCandidateChange(i, 'description', e.target.value)}
+                                                <label className="form-label">Registration Number</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={c.registerNumber}
+                                                    placeholder="e.g. 730521104001"
+                                                    onChange={(e) => handleCandidateChange(i, 'registerNumber', e.target.value)}
                                                 />
                                             </div>
+                                        </div>
+                                        <div className="form-group" style={{ marginTop: '16px' }}>
+                                            <label className="form-label">Tagline / Short Manifesto</label>
+
+                                            <input 
+                                                type="text" 
+                                                className="form-input" 
+                                                value={c.description}
+                                                placeholder="e.g. Innovation for All"
+                                                onChange={(e) => handleCandidateChange(i, 'description', e.target.value)}
+                                            />
                                         </div>
                                         {formData.candidates.length > 1 && (
                                             <button 
@@ -184,23 +281,131 @@ const CreateVote = () => {
                                 <div className="form-grid-2">
                                     <div className="form-group">
                                         <label className="form-label">Voting Methodology</label>
-                                        <select name="votingType" className="form-input" value={formData.votingType} onChange={handleChange}>
-                                            <option>Election</option>
-                                            <option>Approval</option>
-                                            <option>Ranked</option>
-                                            <option>Weighted</option>
-                                        </select>
+                                        <input type="text" className="form-input" value="Direct Election" readOnly disabled />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Eligible Audience</label>
                                         <select name="eligibleGroup" className="form-input" value={formData.eligibleGroup} onChange={handleChange}>
-                                            <option>All Users</option>
-                                            <option>Department</option>
-                                            <option>Year</option>
-                                            <option>Staff Only</option>
+                                            <option value="All Users">All Users</option>
+                                            <option value="Department & Year">Department & Year</option>
+                                            <option value="Staff Filtered">Staff Filtered</option>
                                         </select>
                                     </div>
                                 </div>
+
+                                {(formData.eligibleGroup === 'Department & Year' || formData.eligibleGroup === 'Staff Filtered') && (
+                                    <div className="form-group animate-fadeIn" style={{ marginTop: '16px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label className="form-label">Select Targeted Departments</label>
+                                            <button type="button" onClick={() => selectAllValues(DEPARTMENTS)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+                                                {DEPARTMENTS.every(d => formData.eligibleValues.includes(d)) ? 'Deselect All' : 'Select All'}
+                                            </button>
+                                        </div>
+                                        <div className="selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px', marginTop: '8px' }}>
+                                            {DEPARTMENTS.map(val => (
+                                                <div 
+                                                    key={val}
+                                                    onClick={() => toggleEligibleValue(val)}
+                                                    className={`selection-chip ${formData.eligibleValues.includes(val) ? 'active' : ''}`}
+                                                    style={{
+                                                        padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)',
+                                                        fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                                                        background: formData.eligibleValues.includes(val) ? 'var(--primary-glow)' : 'var(--bg-main)',
+                                                        borderColor: formData.eligibleValues.includes(val) ? 'var(--primary)' : 'var(--border)',
+                                                        color: formData.eligibleValues.includes(val) ? 'var(--primary)' : 'var(--text-main)',
+                                                        fontWeight: formData.eligibleValues.includes(val) ? 700 : 500
+                                                    }}
+                                                >
+                                                    <div style={{ 
+                                                        width: 16, height: 16, borderRadius: 4, 
+                                                        border: `1.5px solid ${formData.eligibleValues.includes(val) ? 'var(--primary)' : 'var(--border)'}`,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        background: formData.eligibleValues.includes(val) ? 'var(--primary)' : 'transparent'
+                                                    }}>
+                                                        {formData.eligibleValues.includes(val) && <span style={{ color: 'white', fontSize: 10 }}>✓</span>}
+                                                    </div>
+                                                    {val}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {formData.eligibleGroup === 'Department & Year' && (
+                                    <div className="form-group animate-fadeIn" style={{ marginTop: '16px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label className="form-label">Select Targeted Years</label>
+                                            <button type="button" onClick={() => selectAllValues(YEARS)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+                                                {YEARS.every(d => formData.eligibleValues.includes(d)) ? 'Deselect All' : 'Select All'}
+                                            </button>
+                                        </div>
+                                        <div className="selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px', marginTop: '8px' }}>
+                                            {YEARS.map(val => (
+                                                <div 
+                                                    key={val}
+                                                    onClick={() => toggleEligibleValue(val)}
+                                                    className={`selection-chip ${formData.eligibleValues.includes(val) ? 'active' : ''}`}
+                                                    style={{
+                                                        padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)',
+                                                        fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                                                        background: formData.eligibleValues.includes(val) ? 'var(--primary-glow)' : 'var(--bg-main)',
+                                                        borderColor: formData.eligibleValues.includes(val) ? 'var(--primary)' : 'var(--border)',
+                                                        color: formData.eligibleValues.includes(val) ? 'var(--primary)' : 'var(--text-main)',
+                                                        fontWeight: formData.eligibleValues.includes(val) ? 700 : 500
+                                                    }}
+                                                >
+                                                    <div style={{ 
+                                                        width: 16, height: 16, borderRadius: 4, 
+                                                        border: `1.5px solid ${formData.eligibleValues.includes(val) ? 'var(--primary)' : 'var(--border)'}`,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        background: formData.eligibleValues.includes(val) ? 'var(--primary)' : 'transparent'
+                                                    }}>
+                                                        {formData.eligibleValues.includes(val) && <span style={{ color: 'white', fontSize: 10 }}>✓</span>}
+                                                    </div>
+                                                    {val}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {formData.eligibleGroup === 'Staff Filtered' && (
+                                    <div className="form-group animate-fadeIn" style={{ marginTop: '16px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label className="form-label">Select Targeted Positions</label>
+                                            <button type="button" onClick={() => selectAllValues(POSITIONS)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+                                                {POSITIONS.every(p => formData.eligibleValues.includes(p)) ? 'Deselect All' : 'Select All'}
+                                            </button>
+                                        </div>
+                                        <div className="selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px', marginTop: '8px' }}>
+                                            {POSITIONS.map(val => (
+                                                <div 
+                                                    key={val}
+                                                    onClick={() => toggleEligibleValue(val)}
+                                                    className={`selection-chip ${formData.eligibleValues.includes(val) ? 'active' : ''}`}
+                                                    style={{
+                                                        padding: '10px 14px', borderRadius: '10px', border: '1.5px solid var(--border)',
+                                                        fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                                                        background: formData.eligibleValues.includes(val) ? 'var(--primary-glow)' : 'var(--bg-main)',
+                                                        borderColor: formData.eligibleValues.includes(val) ? 'var(--primary)' : 'var(--border)',
+                                                        color: formData.eligibleValues.includes(val) ? 'var(--primary)' : 'var(--text-main)',
+                                                        fontWeight: formData.eligibleValues.includes(val) ? 700 : 500
+                                                    }}
+                                                >
+                                                    <div style={{ 
+                                                        width: 16, height: 16, borderRadius: 4, 
+                                                        border: `1.5px solid ${formData.eligibleValues.includes(val) ? 'var(--primary)' : 'var(--border)'}`,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        background: formData.eligibleValues.includes(val) ? 'var(--primary)' : 'transparent'
+                                                    }}>
+                                                        {formData.eligibleValues.includes(val) && <span style={{ color: 'white', fontSize: 10 }}>✓</span>}
+                                                    </div>
+                                                    {val}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="form-grid-2">
                                     <div className="form-group">
                                         <label className="form-label">Election Commencement</label>
@@ -225,11 +430,14 @@ const CreateVote = () => {
                                     <div className="form-grid-2">
                                         <div>
                                             <label className="form-label">Methodology</label>
-                                            <div style={{ fontWeight: 600 }}>{formData.votingType}</div>
+                                            <div style={{ fontWeight: 600 }}>Direct Election</div>
                                         </div>
                                         <div>
                                             <label className="form-label">Target Audience</label>
-                                            <div style={{ fontWeight: 600 }}>{formData.eligibleGroup}</div>
+                                            <div style={{ fontWeight: 600 }}>
+                                                {formData.eligibleGroup} 
+                                                {formData.eligibleValues.length > 0 && ` (${formData.eligibleValues.join(', ')})`}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="form-grid-2">

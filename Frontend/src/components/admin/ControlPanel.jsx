@@ -8,19 +8,19 @@ const ControlPanel = () => {
     { label: 'Create New Election', icon: '🗳️', color: 'var(--primary)', onClick: () => navigate('/admin/create-vote') },
     { label: 'Add Candidate', icon: '👤', color: 'var(--secondary)', onClick: () => navigate('/admin/active-votes') },
     { label: 'Import Students', icon: '📥', color: 'var(--accent)', onClick: () => navigate('/admin/users') },
-    { label: 'Publish Announcement', icon: '📢', color: 'var(--info)', onClick: () => navigate('/user/notifications') },
-    { label: 'Send Notification', icon: '🔔', color: 'var(--warning)', onClick: () => navigate('/user/notifications') },
+    { label: 'Publish Announcement', icon: '📢', color: 'var(--info)', onClick: () => navigate('/admin/announcements') },
+
     { label: 'Lock or End Election', icon: '🔒', color: 'var(--danger)', onClick: () => navigate('/admin/active-votes') },
   ];
 
   return (
     <div className="dashboard-card glass-panel animate-slideUp">
       <h3 className="section-title">Admin Quick Actions</h3>
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
-        gap: '16px', 
-        marginTop: '20px' 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+        gap: '16px',
+        marginTop: '20px'
       }}>
         {actions.map((action, index) => (
           <button

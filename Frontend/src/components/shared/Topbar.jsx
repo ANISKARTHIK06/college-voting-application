@@ -147,7 +147,16 @@ const Topbar = ({ onToggleSidebar, collapsed }) => {
           )}
         </div>
 
-        <div className="topbar-user">
+        <div
+          className="topbar-user"
+          style={{ cursor: 'pointer' }}
+          onClick={() => {
+            if (user?.role === 'admin')   navigate('/admin/profile');
+            else if (user?.role === 'faculty') navigate('/faculty/profile');
+            else navigate('/student/profile');
+          }}
+          title="View Profile"
+        >
           <div className="topbar-user-info">
             <span className="topbar-user-name">{user?.name || 'Guest'}</span>
             <span className="topbar-user-role">{user?.userType || user?.role || 'member'}</span>

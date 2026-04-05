@@ -16,12 +16,18 @@ const voteSchema = new mongoose.Schema({
     },
     votingType: {
         type: String,
-        enum: ["Election", "Approval", "Ranked", "Weighted"],
+        enum: ["Election"],
+        default: "Election",
         required: true,
     },
     candidates: [
         {
+            user: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User"
+            },
             name: String,
+            registerNumber: String,
             description: String,
             image: String,
         },

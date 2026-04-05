@@ -17,12 +17,15 @@ import UsersManagement from './pages/admin/UsersManagement';
 import Analytics from './pages/admin/Analytics';
 import CandidateManager from './pages/admin/CandidateManager';
 
+import ElectionRequests from './pages/admin/ElectionRequests';
+
 // User Pages
 import UserDashboard from './pages/user/UserDashboard';
 import UserActiveVotes from './pages/user/UserActiveVotes';
 import VotingInterface from './pages/user/VotingInterface';
 import VoteResults from './pages/user/VoteResults';
 import Notifications from './pages/user/Notifications';
+import MyHistory from './pages/user/MyHistory';
 
 // New Phase 3 Components
 import ManageAnnouncements from './pages/admin/ManageAnnouncements';
@@ -30,6 +33,7 @@ import ActivityLogs from './pages/admin/ActivityLogs';
 import Announcements from './pages/user/Announcements';
 import CandidateProfile from './pages/user/CandidateProfile';
 import StudentProfile from './pages/user/StudentProfile';
+import ElectionRequest from './pages/user/ElectionRequest';
 
 import FacultyDashboard from './pages/faculty/FacultyDashboard';
 
@@ -54,6 +58,9 @@ function App() {
             <Route path="/admin/analytics/:id" element={<Analytics />} />
             <Route path="/admin/analytics" element={<Analytics />} />
             <Route path="/admin/candidates/:id" element={<CandidateManager />} />
+
+            <Route path="/admin/profile" element={<StudentProfile />} />
+            <Route path="/admin/election-requests" element={<ElectionRequests />} />
           </Route>
         </Route>
 
@@ -63,8 +70,11 @@ function App() {
             <Route path="/faculty/dashboard" element={<FacultyDashboard />} />
             <Route path="/faculty/monitoring" element={<ActiveVotes />} />
             <Route path="/faculty/candidates" element={<CandidateManager />} />
+            <Route path="/faculty/candidates/:id" element={<CandidateManager />} />
             <Route path="/faculty/statistics" element={<Analytics />} />
+            <Route path="/faculty/statistics/:id" element={<Analytics />} />
             <Route path="/faculty/results" element={<Analytics />} />
+            <Route path="/faculty/results/:id" element={<Analytics />} />
             <Route path="/faculty/announcements" element={<Announcements />} />
             <Route path="/faculty/profile" element={<CandidateProfile />} />
           </Route>
@@ -77,11 +87,12 @@ function App() {
             <Route path="/student/vote/:id" element={<VotingInterface />} />
             <Route path="/student/results" element={<VoteResults />} />
             <Route path="/student/active-votes" element={<UserActiveVotes />} />
-            <Route path="/student/history" element={<VoteResults />} />
+            <Route path="/student/history" element={<MyHistory />} />
             <Route path="/student/announcements" element={<Announcements />} />
             <Route path="/student/candidate/:id" element={<CandidateProfile />} />
             <Route path="/student/notifications" element={<Notifications />} />
             <Route path="/student/profile" element={<StudentProfile />} />
+            <Route path="/student/request-election" element={<ElectionRequest />} />
           </Route>
         </Route>
 

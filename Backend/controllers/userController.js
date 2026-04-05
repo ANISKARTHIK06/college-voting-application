@@ -92,3 +92,40 @@ exports.bulkImportUsers = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// @desc    Search users by name or register number
+// @route   GET /api/users/search?q=query
+// @access  Private/Admin
+exports.searchUsers = async (req, res) => {
+    try {
+        const query = req.query.q;
+        if (!query) return res.json([]);
+
+        // Search active users by name or register number (case-insensitive)
+        const users = await User.find({
+            isActive: true,
+            $or: [
+                { name: { $regex: query, $options: 'i' } },
+                { registerNumber: { $regex: query, $options: 'i' } }
+            ]
+        }).select('name registerNumber email department position').limit(10);
+
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get all active students (users) for candidate selection
+// @route   GET /api/users/students
+// @access  Private
+exports.getAllStudents = async (req, res) => {
+    try {
+        const students = await User.find({ role: 'user', isActive: true })
+            .select('name registerNumber department')
+            .sort('name');
+        res.json(students);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

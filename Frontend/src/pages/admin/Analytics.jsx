@@ -5,15 +5,37 @@ import StatCard from '../../components/shared/StatCard';
 import '../../styles/Dashboard.css';
 
 const Analytics = () => {
-    const { id } = useParams();
+    const { id: routeId } = useParams();
+    const [selectedId, setSelectedId] = useState(routeId || null);
+    const [allVotes, setAllVotes] = useState([]);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchResults = async () => {
+        const fetchVotes = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get(`http://localhost:5000/api/votes/${id}/results`, {
+                const res = await axios.get(`http://localhost:5000/api/votes`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setAllVotes(res.data);
+                if (!routeId && res.data.length > 0) {
+                    setSelectedId(res.data[0]._id);
+                }
+            } catch (err) {
+                console.error('Failed to fetch votes list');
+                setLoading(false);
+            }
+        };
+        fetchVotes();
+    }, [routeId]);
+
+    useEffect(() => {
+        const fetchResults = async () => {
+            setLoading(true);
+            try {
+                const token = localStorage.getItem('token');
+                const res = await axios.get(`http://localhost:5000/api/votes/${selectedId}/results`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setData(res.data);
@@ -23,8 +45,8 @@ const Analytics = () => {
                 setLoading(false);
             }
         };
-        if (id) fetchResults();
-    }, [id]);
+        if (selectedId) fetchResults();
+    }, [selectedId]);
 
     if (loading) {
       return (
@@ -35,7 +57,14 @@ const Analytics = () => {
       );
     }
 
-    if (!data) return <div className="error-box">No data found for this campaign.</div>;
+    if (!data && !loading) return (
+        <div className="analytics-page">
+            <h1 className="page-title">Analytics</h1>
+            <div className="empty-state" style={{ marginTop: '24px' }}>
+                <p>No election data found.</p>
+            </div>
+        </div>
+    );
 
     const { vote, totalVotes, results, departmentTurnout } = data;
 
@@ -48,13 +77,25 @@ const Analytics = () => {
 
     return (
         <div className="analytics-page">
-            <div className="page-header">
+            <div className="page-header" style={{ flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                    <h1 className="page-title">{vote.title} — Analytics</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                        <h1 className="page-title" style={{ margin: 0 }}>Analytics:</h1>
+                        <select 
+                            className="form-input" 
+                            style={{ width: 'auto', minWidth: '250px', padding: '8px 12px', fontWeight: 700 }}
+                            value={selectedId || ''}
+                            onChange={(e) => setSelectedId(e.target.value)}
+                        >
+                            {allVotes.map(v => (
+                                <option key={v._id} value={v._id}>{v.title} ({v.status})</option>
+                            ))}
+                        </select>
+                    </div>
                     <p className="page-subtitle">Real-time participation and outcome tracking</p>
                 </div>
                 <div className="page-header-actions">
-                  <span className={`badge ${vote.status === 'active' ? 'badge-active' : 'badge-ended'}`}>
+                  <span className={`badge ${vote.status === 'active' ? 'badge-active' : vote.status === 'published' ? 'badge-published' : 'badge-ended'}`}>
                     {vote.status}
                   </span>
                   <button className="btn btn-primary btn-sm">Export Audit Log</button>
