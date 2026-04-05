@@ -1,10 +1,11 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { X, Users, Mail, BookOpen, Clock } from 'lucide-react';
 import { getCurrentUser } from '../../services/authService';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE_URL;
 
 const ActiveVotes = () => {
     const [votes, setVotes]         = useState([]);

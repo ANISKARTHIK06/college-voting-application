@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -18,8 +19,8 @@ const AdminDashboard = () => {
       try {
         const token = localStorage.getItem('token');
         const [annRes, actRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/announcements', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:5000/api/activity', { headers: { Authorization: `Bearer ${token}` } })
+          axios.get(`${API_BASE_URL}/announcements`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API_BASE_URL}/activity`, { headers: { Authorization: `Bearer ${token}` } })
         ]);
         setAnnouncements(annRes.data.slice(0, 3));
         setActivity(actRes.data.slice(0, 3));

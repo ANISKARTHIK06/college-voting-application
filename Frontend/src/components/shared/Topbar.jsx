@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { getCurrentUser } from '../../services/authService';
@@ -44,7 +45,7 @@ const Topbar = ({ onToggleSidebar, collapsed }) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      const res = await axios.get('http://localhost:5000/api/notifications', {
+      const res = await axios.get(`${API_BASE_URL}/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(res.data.slice(0, 5));
@@ -57,7 +58,7 @@ const Topbar = ({ onToggleSidebar, collapsed }) => {
     e.stopPropagation();
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/notifications/${id}/read`, {}, {
+      await axios.put(`${API_BASE_URL}/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));

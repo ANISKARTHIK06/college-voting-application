@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -14,7 +15,7 @@ const CandidateProfile = () => {
         const fetchCandidate = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get(`http://localhost:5000/api/candidates/${id}`, {
+                const res = await axios.get(`${API_BASE_URL}/candidates/${id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setCandidate(res.data);

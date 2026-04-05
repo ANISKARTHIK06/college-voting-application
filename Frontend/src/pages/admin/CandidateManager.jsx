@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -16,7 +17,7 @@ const CandidateManager = () => {
     const fetchVote = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get(`http://localhost:5000/api/votes/${id}`, {
+            const res = await axios.get(`${API_BASE_URL}/votes/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setVote(res.data);
@@ -50,7 +51,7 @@ const CandidateManager = () => {
         setSaving(true);
         try {
             const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/votes/${id}`, { candidates: vote.candidates }, {
+            await axios.put(`${API_BASE_URL}/votes/${id}`, { candidates: vote.candidates }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             alert('Candidates updated successfully');

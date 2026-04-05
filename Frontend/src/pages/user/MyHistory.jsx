@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +7,7 @@ import {
     User2, Trophy, ChevronRight, BarChart2, Calendar, AlertCircle, RefreshCw
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE_URL;
 
 const STATUS_META = {
     active:    { color: '#10b981', bg: 'rgba(16,185,129,0.1)',  label: 'Active'    },

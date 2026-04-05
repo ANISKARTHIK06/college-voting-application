@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -31,7 +32,7 @@ const ManageAnnouncements = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            let url = 'http://localhost:5000/api/announcements';
+            let url = `${API_BASE_URL}/announcements`;
             if (filter === 'Archived') url += '?isArchived=true';
             const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
             setAnnouncements(res.data);
@@ -48,7 +49,7 @@ const ManageAnnouncements = () => {
             setShowAudit(true);
             setAuditLoading(true);
             const token = localStorage.getItem('token');
-            const res = await axios.get(`http://localhost:5000/api/announcements/${announcement._id}/revisions`, {
+            const res = await axios.get(`${API_BASE_URL}/announcements/${announcement._id}/revisions`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setAuditData(res.data);
@@ -67,7 +68,7 @@ const ManageAnnouncements = () => {
                 ...formData,
                 targetValues: formData.targetValues.split(',').map(v => v.trim()).filter(v => v)
             };
-            await axios.post('http://localhost:5000/api/announcements', payload, {
+            await axios.post(`${API_BASE_URL}/announcements`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             toast.success('Announcement published successfully!');
@@ -83,7 +84,7 @@ const ManageAnnouncements = () => {
         if (!window.confirm('Archive this announcement?')) return;
         try {
             const token = localStorage.getItem('token');
-            await axios.delete(`http://localhost:5000/api/announcements/${id}`, {
+            await axios.delete(`${API_BASE_URL}/announcements/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             toast.success('Archived successfully');

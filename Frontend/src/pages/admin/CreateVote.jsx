@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -126,7 +127,7 @@ const CreateVote = () => {
         try {
             const token = localStorage.getItem('token');
             const submitData = { ...formData, eligibleGroup: finalGroup };
-            await axios.post('http://localhost:5000/api/votes', submitData, {
+            await axios.post(`${API_BASE_URL}/votes`, submitData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             navigate('/admin/active-votes');

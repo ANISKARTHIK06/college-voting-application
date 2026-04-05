@@ -19,6 +19,16 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("Connected to MongoDB"))
     .catch((err) => console.log("MongoDB connection error:", err));
 
+// Health check routes
+app.get("/", (req, res) => {
+    res.json({
+        status: "✅ College Voting API is running",
+        version: "1.0.0",
+        endpoints: "/api/auth | /api/votes | /api/users | /api/candidates | /api/announcements | /api/notifications | /api/activity | /api/election-requests"
+    });
+});
+app.get("/api/health", (req, res) => res.json({ status: "ok", uptime: process.uptime() }));
+
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/votes", require("./routes/voteRoutes"));

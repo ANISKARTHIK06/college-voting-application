@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -15,7 +16,7 @@ const Analytics = () => {
         const fetchVotes = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get(`http://localhost:5000/api/votes`, {
+                const res = await axios.get(`${API_BASE_URL}/votes`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setAllVotes(res.data);
@@ -35,7 +36,7 @@ const Analytics = () => {
             setLoading(true);
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get(`http://localhost:5000/api/votes/${selectedId}/results`, {
+                const res = await axios.get(`${API_BASE_URL}/votes/${selectedId}/results`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setData(res.data);

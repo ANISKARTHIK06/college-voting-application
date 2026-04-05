@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -6,7 +7,7 @@ import {
     User, Mail, BookOpen, Calendar, AlertCircle, Filter
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE_URL;
 
 const STATUS_META = {
     pending:  { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  label: 'Pending Review' },

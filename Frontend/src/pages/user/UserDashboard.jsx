@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
@@ -7,7 +8,7 @@ import {
     Clock, CheckCircle, Plus, Activity, Globe
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE_URL;
 
 const UserDashboard = () => {
     const [votes, setVotes]                 = useState([]);

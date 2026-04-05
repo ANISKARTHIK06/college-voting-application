@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Megaphone, Users, LineChart, ShieldCheck } from 'lucide-react';
@@ -14,7 +15,7 @@ const FacultyDashboard = () => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5000/api/announcements', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await axios.get(`${API_BASE_URL}/announcements`, { headers: { Authorization: `Bearer ${token}` } });
         setAnnouncements(res.data.slice(0, 3));
       } catch (error) {
         console.error('Failed to fetch dashboard data');

@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -8,7 +9,7 @@ import {
 } from 'lucide-react';
 import { getCurrentUser } from '../../services/authService';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE_URL;
 
 const TYPE_META = {
     Election: { icon: Vote,        color: '#6366f1', label: 'Direct Election'    },

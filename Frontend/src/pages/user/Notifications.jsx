@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../../styles/Dashboard.css';
@@ -14,7 +15,7 @@ const Notifications = () => {
     const fetchNotifications = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/notifications', {
+            const res = await axios.get(`${API_BASE_URL}/notifications`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setNotifications(res.data);
@@ -28,7 +29,7 @@ const Notifications = () => {
     const markAsRead = async (id) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/notifications/${id}/read`, {}, {
+            await axios.put(`${API_BASE_URL}/notifications/${id}/read`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));
@@ -40,7 +41,7 @@ const Notifications = () => {
     const markAllRead = async () => {
         try {
             const token = localStorage.getItem('token');
-            await axios.put('http://localhost:5000/api/notifications/mark-all-read', {}, {
+            await axios.put(`${API_BASE_URL}/notifications/mark-all-read`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setNotifications(notifications.map(n => ({ ...n, isRead: true })));
@@ -52,7 +53,7 @@ const Notifications = () => {
     const deleteNotification = async (id) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.delete(`http://localhost:5000/api/notifications/${id}`, {
+            await axios.delete(`${API_BASE_URL}/notifications/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setNotifications(notifications.filter(n => n._id !== id));

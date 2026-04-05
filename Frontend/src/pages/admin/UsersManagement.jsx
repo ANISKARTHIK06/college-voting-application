@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -14,7 +15,7 @@ const UsersManagement = () => {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/users', {
+            const res = await axios.get(`${API_BASE_URL}/users`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUsers(res.data);
@@ -32,7 +33,7 @@ const UsersManagement = () => {
         try {
             const token = localStorage.getItem('token');
             const newRole = currentRole === 'admin' ? 'user' : 'admin';
-            await axios.patch(`http://localhost:5000/api/users/${userId}/role`, { role: newRole }, {
+            await axios.patch(`${API_BASE_URL}/users/${userId}/role`, { role: newRole }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchUsers();
@@ -44,7 +45,7 @@ const UsersManagement = () => {
     const toggleStatus = async (userId) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.patch(`http://localhost:5000/api/users/${userId}/status`, {}, {
+            await axios.patch(`${API_BASE_URL}/users/${userId}/status`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchUsers();
@@ -74,7 +75,7 @@ const UsersManagement = () => {
 
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.post('http://localhost:5000/api/users/import', { users: usersData }, {
+                const res = await axios.post(`${API_BASE_URL}/users/import`, { users: usersData }, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 alert(res.data.message);

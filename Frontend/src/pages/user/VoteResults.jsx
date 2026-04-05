@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
@@ -5,7 +6,7 @@ import {
     Medal, Users, TrendingUp, Star, Award, Filter
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = API_BASE_URL;
 
 /* ─── helpers ─── */
 const getInitials = n => n ? n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) : '?';

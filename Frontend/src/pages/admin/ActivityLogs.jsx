@@ -1,3 +1,4 @@
+﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -51,7 +52,7 @@ const ActivityLogs = () => {
             if (refresh) setRefreshing(true);
             else setLoading(true);
             const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/activity', {
+            const res = await axios.get(`${API_BASE_URL}/activity`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setLogs(res.data);
