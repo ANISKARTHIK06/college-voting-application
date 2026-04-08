@@ -1,9 +1,9 @@
-﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { getCurrentUser } from '../../services/authService';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import http from '@/config/http';
+import { Bell, Clock, Info, Trash2 } from 'lucide-react';
 
 const MoonIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -33,37 +33,52 @@ const Topbar = ({ onToggleSidebar, collapsed }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // 30s poll
+    fetchTopbarData();
+    const interval = setInterval(fetchTopbarData, 30000); // 30s poll
     return () => clearInterval(interval);
   }, []);
 
-  const fetchNotifications = async () => {
+  const fetchTopbarData = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      const res = await axios.get(`${API_BASE_URL}/notifications`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setNotifications(res.data.slice(0, 5));
+      
+      // Fetch notifications
+      const notifRes = await http.get('/notifications');
+      setNotifications(notifRes.data.slice(0, 5));
+
+      // Fetch pending requests count if admin
+      if (user?.role === 'admin') {
+        const reqRes = await http.get('/election-requests');
+        const pendingCount = reqRes.data.filter(r => r.status === 'pending').length;
+        setPendingRequests(pendingCount);
+      }
     } catch (error) {
-      console.error('Failed to update topbar notifications');
+      console.error('Failed to update topbar data');
     }
   };
 
   const markRead = async (id, e) => {
     e.stopPropagation();
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${API_BASE_URL}/notifications/${id}/read`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await http.put(`/notifications/${id}/read`, {});
       setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));
     } catch (error) {
       console.error('Failed to mark read');
+    }
+  };
+
+  const deleteNotif = async (id, e) => {
+    e.stopPropagation();
+    try {
+      await http.delete(`/notifications/${id}`);
+      setNotifications(notifications.filter(n => n._id !== id));
+    } catch (error) {
+      console.error('Failed to delete notification');
     }
   };
 
@@ -75,14 +90,15 @@ const Topbar = ({ onToggleSidebar, collapsed }) => {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path.includes('dashboard')) return user?.role === 'admin' ? 'Admin Console' : 'My Dashboard';
-    if (path.includes('create-vote')) return 'Create New Vote';
-    if (path.includes('active-votes') || path.includes('manage')) return 'Manage Votes';
+    if (path.includes('create-vote') || path.includes('create-election')) return 'Election Setup';
+    if (path.includes('active-votes') || path.includes('manage') || path.includes('monitoring')) return 'Election Monitoring';
     if (path.includes('users')) return 'User Management';
-    if (path.includes('analytics')) return 'Analytics';
+    if (path.includes('analytics') || path.includes('statistics')) return 'Analytics & Reports';
     if (path.includes('vote/')) return 'Voting Booth';
     if (path.includes('results')) return 'Results';
     if (path.includes('history')) return 'Vote History';
-    if (path.includes('notifications')) return 'Notifications';
+    if (path.includes('notifications') || path.includes('announcements')) return 'Communications';
+    if (path.includes('candidates')) return 'Candidate Profiles';
     return 'Platform';
   };
 
@@ -110,6 +126,18 @@ const Topbar = ({ onToggleSidebar, collapsed }) => {
           {theme === 'light' ? <MoonIcon /> : <SunIcon />}
         </button>
 
+        {user?.role === 'admin' && pendingRequests > 0 && (
+          <button 
+            className="topbar-icon-btn request-alert-btn animate-pulse" 
+            onClick={() => navigate('/admin/dashboard')}
+            title={`${pendingRequests} Pending Election Proposals`}
+            style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)' }}
+          >
+            <Clock size={16} />
+            <span className="notif-badge" style={{ background: '#f59e0b' }}>{pendingRequests}</span>
+          </button>
+        )}
+
         <div className="notif-dropdown-wrapper">
           <button className="topbar-icon-btn" onClick={() => setShowDropdown(!showDropdown)} aria-label="Notifications">
             <BellIcon />
@@ -136,9 +164,14 @@ const Topbar = ({ onToggleSidebar, collapsed }) => {
                       <div className="notif-item-title">{n.title}</div>
                       <div className="notif-item-time">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
-                    {!n.isRead && (
-                      <button className="notif-item-mark" onClick={(e) => markRead(n._id, e)}>Read</button>
-                    )}
+                    <div className="notif-item-actions" style={{ display: 'flex', gap: 8 }}>
+                      {!n.isRead && (
+                        <button className="notif-item-mark" style={{ color:'var(--primary)', fontSize:'0.7rem', fontWeight:800 }} onClick={(e) => markRead(n._id, e)}>Read</button>
+                      )}
+                      <button className="notif-item-del" style={{ border:'none', background:'none', color:'#ef4444', opacity:0.6, cursor:'pointer' }} onClick={(e) => deleteNotif(n._id, e)}>
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
                 )) : (
                   <div className="notif-dropdown-empty">Zero alerts to report.</div>

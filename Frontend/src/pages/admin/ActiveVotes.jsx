@@ -44,7 +44,7 @@ const ActiveVotes = () => {
             const token = localStorage.getItem('token');
             await axios.delete(`${API}/votes/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             setVotes(votes.filter(v => v._id !== id));
-        } catch { alert('Failed to delete vote'); }
+        } catch (err) { alert(err.response?.data?.message || 'Failed to delete vote'); }
     };
 
     const openVoterDrawer = async (vote) => {
@@ -106,7 +106,7 @@ const ActiveVotes = () => {
         <div className="active-votes-page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Election Management Console</h1>
+                    <h1 className="page-title">{user?.role === 'faculty' ? 'Election Monitoring Console' : 'Election Management Console'}</h1>
                     <p className="page-subtitle">Full lifecycle control for voting campaigns</p>
                 </div>
                 <div className="page-header-actions">
@@ -131,9 +131,11 @@ const ActiveVotes = () => {
                             >{f}</button>
                         ))}
                     </div>
-                    {user?.role === 'admin' && (
+                    {user?.role === 'admin' ? (
                         <Link to="/admin/create-vote" className="btn btn-primary">+ New Election</Link>
-                    )}
+                    ) : user?.role === 'faculty' ? (
+                        <Link to="/faculty/create-election" className="btn btn-primary">+ Launch Election</Link>
+                    ) : null}
                 </div>
             </div>
 
@@ -165,9 +167,13 @@ const ActiveVotes = () => {
                                         </div>
                                     </td>
                                     <td style={{ padding:'24px' }}>
-                                        <button className="who-voted-btn" onClick={() => openVoterDrawer(vote)}>
-                                            <Users size={14} /> Who Voted
-                                        </button>
+                                        {vote.status !== 'draft' ? (
+                                            <button className="who-voted-btn" onClick={() => openVoterDrawer(vote)}>
+                                                <Users size={14} /> Who Voted
+                                            </button>
+                                        ) : (
+                                            <span style={{ fontSize:'0.75rem', color:'var(--text-muted)', fontWeight:600 }}>Waiting for Launch</span>
+                                        )}
                                     </td>
                                     <td style={{ padding:'24px', fontSize:'0.8rem', color:'var(--text-muted)' }}>
                                         <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
@@ -178,17 +184,17 @@ const ActiveVotes = () => {
                                     <td style={{ padding:'24px', textAlign:'right' }}>
                                         <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end', flexWrap:'wrap' }}>
                                             {vote.status!=='active' && vote.status!=='published' && (
-                                                <button className="btn btn-secondary btn-sm" onClick={() => updateStatus(vote._id,'active')}>Launch ⚡</button>
+                                                <button className="btn btn-secondary btn-sm" onClick={() => updateStatus(vote._id,'active')}>Publish to Students ⚡</button>
                                             )}
                                             {vote.status==='active' && (
-                                                <button className="btn btn-secondary btn-sm" onClick={() => updateStatus(vote._id,'ended')}>End Now 🛑</button>
+                                                <button className="btn btn-secondary btn-sm" onClick={() => updateStatus(vote._id,'ended')}>End Election 🛑</button>
                                             )}
-                                            {vote.status==='ended' && user?.role === 'admin' && (
-                                                <button className="btn btn-primary btn-sm" onClick={() => updateStatus(vote._id,'published')}>Certify 📜</button>
+                                            {vote.status==='ended' && (user?.role === 'admin' || user?.role === 'faculty') && (
+                                                <button className="btn btn-primary btn-sm" onClick={() => updateStatus(vote._id,'published')}>Finalize Results 📜</button>
                                             )}
                                             <Link to={`${rolePrefix}/candidates/${vote._id}`} className="btn btn-secondary btn-sm">Candidates 👥</Link>
                                             <Link to={user?.role === 'faculty' ? `/faculty/statistics/${vote._id}` : `/admin/analytics/${vote._id}`} className="btn btn-ghost btn-sm">Monitoring 📊</Link>
-                                            {user?.role === 'admin' && (
+                                            {(user?.role === 'admin' || (user?.role === 'faculty' && (!vote.createdBy || vote.createdBy === user?._id))) && vote.status !== 'active' && (
                                                 <button className="btn btn-ghost btn-sm" style={{ color:'var(--danger)' }} onClick={() => handleDelete(vote._id)}>Archive</button>
                                             )}
                                         </div>

@@ -10,8 +10,8 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 const logMiddleware = require('../middleware/logMiddleware');
 
 router.get('/mine', protect, getMyRequests);
-router.get('/', protect, authorize('admin'), getRequests);
+router.get('/', protect, authorize('admin', 'faculty'), getRequests);
 router.post('/', protect, logMiddleware('Election Request Submitted'), createRequest);
-router.patch('/:id', protect, authorize('admin'), logMiddleware('Election Request Reviewed'), reviewRequest);
+router.patch('/:id', protect, authorize('admin', 'faculty'), logMiddleware('Election Request Reviewed'), reviewRequest);
 
 module.exports = router;

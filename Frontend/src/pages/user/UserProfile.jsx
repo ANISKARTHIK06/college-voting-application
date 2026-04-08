@@ -21,7 +21,7 @@ const MOCK_HISTORY = [
     { id: 2, title: 'Department Representative',  date: 'Sep 01, 2025', candidate: 'Rahul Sharma' },
 ];
 
-const StudentProfile = () => {
+const UserProfile = () => {
     const navigate   = useNavigate();
     const [user, setUser]       = useState(null);
     const [history]             = useState(MOCK_HISTORY);
@@ -277,4 +277,4 @@ const StudentProfile = () => {
     );
 };
 
-export default StudentProfile;
+export default UserProfile;

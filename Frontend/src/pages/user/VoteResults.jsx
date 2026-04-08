@@ -1,12 +1,12 @@
-﻿import API_BASE_URL from '@/config/api';
-import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useRef } from 'react';
+import http from '@/config/http';
+import { useParams } from 'react-router-dom';
 import {
     Trophy, BarChart2, Globe, Clock, CheckCircle,
     Medal, Users, TrendingUp, Star, Award, Filter
 } from 'lucide-react';
 
-const API = API_BASE_URL;
+// API usage now handled by http instance
 
 /* ─── helpers ─── */
 const getInitials = n => n ? n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) : '?';
@@ -43,6 +43,7 @@ function AnimatedBar({ pct, color, delay = 0 }) {
 }
 
 const VoteResults = () => {
+    const { id: urlId } = useParams();
     const [votes, setVotes]             = useState([]);
     const [resultsData, setResultsData] = useState({});
     const [loading, setLoading]         = useState(true);
@@ -51,17 +52,18 @@ const VoteResults = () => {
     useEffect(() => {
         const load = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const h     = { headers: { Authorization: `Bearer ${token}` } };
-                const vRes  = await axios.get(`${API}/votes`, h);
+                const vRes  = await http.get('/votes');
                 const done  = vRes.data.filter(v => v.status === 'ended' || v.status === 'published');
                 setVotes(done);
-                if (done.length > 0) setActiveCard(done[0]._id);
+                
+                // Prioritize URL parameter, then first election
+                if (urlId) setActiveCard(urlId);
+                else if (done.length > 0) setActiveCard(done[0]._id);
 
                 const map = {};
                 await Promise.all(done.map(async v => {
                     try {
-                        const r = await axios.get(`${API}/votes/${v._id}/results`, h);
+                        const r = await http.get(`/votes/${v._id}/results`);
                         map[v._id] = r.data;
                     } catch {}
                 }));
@@ -70,7 +72,7 @@ const VoteResults = () => {
             finally { setLoading(false); }
         };
         load();
-    }, []);
+    }, [urlId]);
 
     /* rank candidates for a given vote */
     const getRanked = (voteId) => {

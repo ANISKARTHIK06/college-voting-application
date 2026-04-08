@@ -9,6 +9,7 @@ const {
     updateVoteStatus,
     getVoters,
     getMyHistory,
+    deleteVote,
 } = require("../controllers/voteController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 const logMiddleware = require("../middleware/logMiddleware");
@@ -21,6 +22,7 @@ router.get("/:id/results", protect, getResults);
 // Admin/Committee Member actions
 router.post("/", protect, authorize("admin", "faculty"), logMiddleware("Election Created"), createVote);
 router.patch("/:id/status", protect, authorize("admin", "faculty"), logMiddleware("Election Status Updated"), updateVoteStatus);
+router.delete("/:id", protect, authorize("admin", "faculty"), logMiddleware("Election Deleted"), deleteVote);
 
 // Admin voter tracking
 router.get("/:id/voters", protect, authorize("admin", "faculty"), getVoters);

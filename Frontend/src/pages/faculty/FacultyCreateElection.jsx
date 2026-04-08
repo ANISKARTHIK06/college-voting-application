@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import http from '@/config/http';
+import API_BASE_URL from '@/config/api';
+import React, { useState } from 'react';
+import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import {
     Vote, Calendar, Users, Zap, Weight, CheckSquare,
     Clock, Send, Plus, ChevronRight, Info, Star
 } from 'lucide-react';
-import { getCurrentUser } from '../../services/authService';
 
-// API usage now handled by http instance
+const API = API_BASE_URL;
 
 const TYPE_META = {
     Election: { icon: Vote,        color: '#6366f1', label: 'Direct Election'    },
@@ -43,12 +43,9 @@ const POSITIONS = [
     "HOD"
 ];
 
-const ElectionRequest = () => {
-    const [myRequests, setMyRequests] = useState([]);
-    const [loading, setLoading]       = useState(true);
-    const [submitting, setSubmitting] = useState(false);
-    const user = getCurrentUser();
+const FacultyCreateElection = () => {
     const navigate = useNavigate();
+    const [submitting, setSubmitting] = useState(false);
 
     const [form, setForm] = useState({
         title: '', description: '', votingType: 'Election',
@@ -58,23 +55,6 @@ const ElectionRequest = () => {
     });
 
     const [searchQuery, setSearchQuery] = useState('');
-
-    useEffect(() => {
-        fetchMyRequests();
-    }, []);
-
-    const fetchMyRequests = async () => {
-        try {
-            const res = await http.get('/election-requests/mine');
-            setMyRequests(res.data);
-        } catch (err) { 
-            toast.error(err.response?.data?.message || 'Failed to load your requests');
-        } finally { 
-            setLoading(false); 
-        }
-    };
-
-
 
     const toggleEligibleValue = (val) => {
         setForm(prev => {
@@ -117,37 +97,41 @@ const ElectionRequest = () => {
         }
 
         let finalGroup = form.eligibleGroup;
-        // ... (group logic preserved)
         if (finalGroup === 'Department & Year') {
             const hasDepts = form.eligibleValues.some(v => DEPARTMENTS.includes(v));
             const hasYears = form.eligibleValues.some(v => YEARS.includes(v));
             if (hasDepts && !hasYears) finalGroup = 'Department';
             else if (!hasDepts && hasYears) finalGroup = 'Year';
+            else if (!hasDepts && !hasYears) {
+                toast.error('Please select at least one department or year.');
+                return;
+            }
         } else if (finalGroup === 'Staff Filtered') {
             const hasDepts = form.eligibleValues.some(v => DEPARTMENTS.includes(v));
             const hasPositions = form.eligibleValues.some(v => POSITIONS.includes(v));
             if (hasDepts && !hasPositions) finalGroup = 'Staff Department';
             else if (!hasDepts && hasPositions) finalGroup = 'Staff Position';
             else if (hasDepts && hasPositions) finalGroup = 'Staff Department & Position';
+            else if (!hasDepts && !hasPositions) {
+                toast.error('Please select at least one department or position.');
+                return;
+            }
         }
 
         try {
             setSubmitting(true);
+            const token = localStorage.getItem('token');
             const payload = { ...form, eligibleGroup: finalGroup };
-            await http.post('/election-requests', payload);
-            toast.success('Election request submitted! Awaiting admin approval.');
-            setForm({ title:'', description:'', votingType:'Election', eligibleGroup:'All Users', eligibleValues:[], startTime:'', endTime:'', candidates: [] });
-            setSearchQuery('');
-            fetchMyRequests();
+            await axios.post(`${API}/votes`, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success('Draft election created successfully!');
+            navigate('/faculty/monitoring');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Submission failed');
+            toast.error(err.response?.data?.message || 'Failed to create election');
         } finally {
             setSubmitting(false);
         }
-    };
-
-    const handleSearch = async (query) => {
-        setSearchQuery(query);
     };
 
     const addCandidate = () => {
@@ -166,12 +150,6 @@ const ElectionRequest = () => {
             ...prev,
             candidates: prev.candidates.filter((_, i) => i !== index)
         }));
-    };
-
-    const STATUS_STYLE = {
-        pending:  { bg:'rgba(245,158,11,0.1)',   color:'#f59e0b'  },
-        approved: { bg:'rgba(16,185,129,0.1)',   color:'#10b981'  },
-        rejected: { bg:'rgba(239,68,68,0.1)',    color:'#ef4444'  },
     };
 
     return (
@@ -193,40 +171,26 @@ const ElectionRequest = () => {
             .er-ctrl:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
             .er-ctrl::placeholder { color:var(--text-muted); opacity:0.7; }
             textarea.er-ctrl { resize:none; line-height:1.6; }
-            /* vote type picker */
-            .type-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
-            .type-opt { padding:14px 12px; border-radius:12px; border:1.5px solid var(--border); background:var(--bg-main); display:flex; align-items:center; gap:10px; font-weight:700; font-size:0.82rem; cursor:pointer; transition:all 0.15s; color:var(--text-muted); }
-            .type-opt:hover { border-color:var(--primary); }
             .submit-btn { width:100%; padding:15px; border-radius:14px; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-weight:700; font-size:0.9rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s; box-shadow:0 4px 16px rgba(99,102,241,0.3); }
             .submit-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 28px rgba(99,102,241,0.45); }
             .submit-btn:disabled { opacity:0.6; cursor:not-allowed; }
-            /* my requests */
-            .req-section-title { font-size:1rem; font-weight:800; color:var(--text-main); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
-            .req-list { display:flex; flex-direction:column; gap:12px; }
-            .req-card { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:18px 22px; display:flex; align-items:flex-start; gap:16px; }
-            .req-status-dot { width:10px; height:10px; border-radius:50%; margin-top:5px; flex-shrink:0; }
-            .req-title { font-size:0.92rem; font-weight:700; color:var(--text-main); margin-bottom:4px; }
-            .req-meta { font-size:0.75rem; color:var(--text-muted); display:flex; gap:12px; flex-wrap:wrap; margin-bottom:6px; }
-            .req-status-badge { display:inline-flex; padding:3px 10px; border-radius:6px; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; }
-            .req-note { font-size:0.78rem; color:var(--text-muted); font-style:italic; margin-top:6px; background:var(--bg-main); border-radius:8px; padding:8px 12px; border:1px solid var(--border); }
         `}</style>
 
         <div className="er-page">
-            <h1 className="er-title">Request an Election</h1>
-            <p className="er-sub">Propose a new election or referendum for your community. An admin will review and approve your request.</p>
+            <h1 className="er-title">Create an Election</h1>
+            <p className="er-sub">Safely prepare and save an election configuration as a draft.</p>
 
             <div className="info-banner">
                 <Info size={18} color="var(--primary)" style={{ flexShrink:0, marginTop:1 }} />
                 <p style={{ fontSize:'0.82rem', color:'var(--text-muted)', lineHeight:1.6, fontWeight:500 }}>
-                    Your request will be reviewed by an administrator. Once approved, the election will be automatically created as a draft — you'll receive a notification with the outcome.
+                    As a staff member, your election will be securely stored as a draft. It will NOT be visible to students until you manually publish/launch it from your Monitoring console, or until its scheduled Start Time arrives.
                 </p>
             </div>
 
-            {/* Form */}
             <div className="er-form-card">
                 <div className="er-form-head">
                     <div className="er-form-head-title">
-                        <Plus size={16} color="var(--primary)" /> New Election Proposal
+                        <Plus size={16} color="var(--primary)" /> Election Campaign Details
                     </div>
                 </div>
                 <form onSubmit={handleSubmit} className="er-body">
@@ -298,7 +262,7 @@ const ElectionRequest = () => {
                     {form.eligibleGroup === 'Department & Year' && (
                         <div className="er-field" style={{ marginTop: '16px', marginBottom: '16px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <label className="form-label er-lbl">Select Targeted Years</label>
+                                <label className="er-lbl">Select Targeted Years</label>
                                 <button type="button" onClick={() => selectAllValues(YEARS)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
                                     {YEARS.every(d => form.eligibleValues.includes(d)) ? 'Deselect All' : 'Select All'}
                                 </button>
@@ -335,7 +299,7 @@ const ElectionRequest = () => {
                     {form.eligibleGroup === 'Staff Filtered' && (
                         <div className="er-field" style={{ marginTop: '16px', marginBottom: '16px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <label className="form-label er-lbl">Select Targeted Positions</label>
+                                <label className="er-lbl">Select Targeted Positions</label>
                                 <button type="button" onClick={() => selectAllValues(POSITIONS)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
                                     {POSITIONS.every(p => form.eligibleValues.includes(p)) ? 'Deselect All' : 'Select All'}
                                 </button>
@@ -371,19 +335,19 @@ const ElectionRequest = () => {
 
                     <div className="er-row">
                         <div className="er-field">
-                            <label className="er-lbl">Proposed Start *</label>
+                            <label className="er-lbl">Official Start Time *</label>
                             <input required type="datetime-local" className="er-ctrl"
                                 value={form.startTime} onChange={e => setForm({...form, startTime: e.target.value})} />
                         </div>
                         <div className="er-field">
-                            <label className="er-lbl">Proposed End *</label>
+                            <label className="er-lbl">Official End Time *</label>
                             <input required type="datetime-local" className="er-ctrl"
                                 value={form.endTime} onChange={e => setForm({...form, endTime: e.target.value})} />
                         </div>
                     </div>
 
                     <div className="er-field" style={{ position: 'relative' }}>
-                        <label className="er-lbl">Propose Candidates (Optional)</label>
+                        <label className="er-lbl">Candidates / Bidding Options</label>
                         
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                             <input 
@@ -399,7 +363,7 @@ const ElectionRequest = () => {
                                 style={{ padding: '12px 20px', width: 'auto' }}
                                 onClick={addCandidate}
                             >
-                                Add
+                                Add Option
                             </button>
                         </div>
                         
@@ -430,45 +394,13 @@ const ElectionRequest = () => {
                     </div>
 
                     <button type="submit" className="submit-btn" disabled={submitting}>
-                        <Send size={16} /> {submitting ? 'Submitting…' : 'Submit Proposal for Review'}
+                        <Send size={16} /> {submitting ? 'Saving Draft…' : 'Save Election as Draft'}
                     </button>
                 </form>
             </div>
-
-            {/* My Requests */}
-            <div className="req-section-title">
-                <Clock size={18} color="var(--primary)" /> My Submissions
-            </div>
-            {loading ? (
-                <p style={{ color:'var(--text-muted)', fontSize:'0.82rem' }}>Loading…</p>
-            ) : myRequests.length === 0 ? (
-                <p style={{ color:'var(--text-muted)', fontSize:'0.82rem' }}>No requests submitted yet.</p>
-            ) : (
-                <div className="req-list">
-                    {myRequests.map(r => {
-                        const s = STATUS_STYLE[r.status] || STATUS_STYLE.pending;
-                        return (
-                            <div className="req-card" key={r._id}>
-                                <div className="req-status-dot" style={{ background: s.color }} />
-                                <div style={{ flex:1 }}>
-                                    <div className="req-title">{r.title}</div>
-                                    <div className="req-meta">
-                                        <span>{r.eligibleGroup}</span>
-                                        <span>{new Date(r.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}</span>
-                                    </div>
-                                    <span className="req-status-badge" style={{ background: s.bg, color: s.color }}>
-                                        {r.status.toUpperCase()}
-                                    </span>
-                                    {r.reviewNote && <div className="req-note">📝 Admin note: {r.reviewNote}</div>}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
         </div>
         </>
     );
 };
 
-export default ElectionRequest;
+export default FacultyCreateElection;
