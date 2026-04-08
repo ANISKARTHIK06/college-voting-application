@@ -138,48 +138,50 @@ const Topbar = ({ onToggleSidebar, collapsed }) => {
           </button>
         )}
 
-        <div className="notif-dropdown-wrapper">
-          <button className="topbar-icon-btn" onClick={() => setShowDropdown(!showDropdown)} aria-label="Notifications">
-            <BellIcon />
-            {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
-          </button>
+        {user?.role === 'admin' && (
+          <div className="notif-dropdown-wrapper">
+            <button className="topbar-icon-btn" onClick={() => setShowDropdown(!showDropdown)} aria-label="Notifications">
+              <BellIcon />
+              {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+            </button>
 
-          {showDropdown && (
-            <div className="notif-dropdown glass-panel animate-slideUp">
-              <div className="notif-dropdown-header">
-                <span>Recent Alerts</span>
-                <Link to={user?.role === 'admin' ? '/admin/dashboard' : user?.role === 'faculty' ? '/faculty/announcements' : '/student/notifications'} onClick={() => setShowDropdown(false)}>View All</Link>
+            {showDropdown && (
+              <div className="notif-dropdown glass-panel animate-slideUp">
+                <div className="notif-dropdown-header">
+                  <span>Recent Alerts</span>
+                  <Link to="/admin/dashboard" onClick={() => setShowDropdown(false)}>View All</Link>
+                </div>
+                <div className="notif-dropdown-list">
+                  {notifications.length > 0 ? notifications.map(n => (
+                    <div 
+                      key={n._id} 
+                      className={`notif-dropdown-item ${!n.isRead ? 'unread' : ''}`}
+                      onClick={() => { navigate('/admin/dashboard'); setShowDropdown(false); }}
+                    >
+                      <div className="notif-item-icon">
+                        {n.type === 'election' ? '🗳️' : n.type === 'result' ? '🏆' : '🔔'}
+                      </div>
+                      <div className="notif-item-body">
+                        <div className="notif-item-title">{n.title}</div>
+                        <div className="notif-item-time">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
+                      <div className="notif-item-actions" style={{ display: 'flex', gap: 8 }}>
+                        {!n.isRead && (
+                          <button className="notif-item-mark" style={{ color:'var(--primary)', fontSize:'0.7rem', fontWeight:800 }} onClick={(e) => markRead(n._id, e)}>Read</button>
+                        )}
+                        <button className="notif-item-del" style={{ border:'none', background:'none', color:'#ef4444', opacity:0.6, cursor:'pointer' }} onClick={(e) => deleteNotif(n._id, e)}>
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="notif-dropdown-empty">Zero alerts to report.</div>
+                  )}
+                </div>
               </div>
-              <div className="notif-dropdown-list">
-                {notifications.length > 0 ? notifications.map(n => (
-                  <div 
-                    key={n._id} 
-                    className={`notif-dropdown-item ${!n.isRead ? 'unread' : ''}`}
-                    onClick={() => { navigate(user?.role === 'student' ? '/student/notifications' : '/faculty/announcements'); setShowDropdown(false); }}
-                  >
-                    <div className="notif-item-icon">
-                      {n.type === 'election' ? '🗳️' : n.type === 'result' ? '🏆' : '🔔'}
-                    </div>
-                    <div className="notif-item-body">
-                      <div className="notif-item-title">{n.title}</div>
-                      <div className="notif-item-time">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>
-                    <div className="notif-item-actions" style={{ display: 'flex', gap: 8 }}>
-                      {!n.isRead && (
-                        <button className="notif-item-mark" style={{ color:'var(--primary)', fontSize:'0.7rem', fontWeight:800 }} onClick={(e) => markRead(n._id, e)}>Read</button>
-                      )}
-                      <button className="notif-item-del" style={{ border:'none', background:'none', color:'#ef4444', opacity:0.6, cursor:'pointer' }} onClick={(e) => deleteNotif(n._id, e)}>
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="notif-dropdown-empty">Zero alerts to report.</div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         <div
           className="topbar-user"

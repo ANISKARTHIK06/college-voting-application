@@ -214,8 +214,7 @@ const UserDashboard = () => {
                     </div>
                 </div>
 
-                {/* Side Column */}
-                <div className="ud-side">
+                             <div className="ud-side">
                     {/* Announcements */}
                     <div className="ud-panel">
                         <div className="ud-panel-header">
@@ -238,8 +237,6 @@ const UserDashboard = () => {
                             View All Notices <ChevronRight size={14} />
                         </button>
                     </div>
-
-                    )}
                 </div>
             </div>
         </div>
