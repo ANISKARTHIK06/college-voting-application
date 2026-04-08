@@ -29,6 +29,7 @@ exports.getRequests = async (req, res) => {
             .sort('-createdAt');
         res.json(requests);
     } catch (err) {
+        console.error('Error in getRequests:', err);
         res.status(500).json({ message: err.message });
     }
 };
@@ -42,6 +43,7 @@ exports.getMyRequests = async (req, res) => {
             .sort('-createdAt');
         res.json(requests);
     } catch (err) {
+        console.error('Error in getMyRequests:', err);
         res.status(500).json({ message: err.message });
     }
 };

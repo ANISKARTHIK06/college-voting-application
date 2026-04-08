@@ -1,4 +1,4 @@
-﻿import API_BASE_URL from '@/config/api';
+import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
@@ -24,11 +24,9 @@ const UserDashboard = () => {
         Promise.all([
             axios.get(`${API}/votes`, h),
             axios.get(`${API}/announcements`, h),
-            axios.get(`${API}/notifications`, h),
-        ]).then(([vr, ar, nr]) => {
+        ]).then(([vr, ar]) => {
             setVotes(vr.data);
             setAnnouncements(ar.data.slice(0, 4));
-            setNotifications(nr.data.filter(n => !n.isRead).slice(0, 3));
         }).catch(console.error)
           .finally(() => setLoading(false));
     }, []);
@@ -127,7 +125,6 @@ const UserDashboard = () => {
                 {[
                     { icon:Vote,       color:'#6366f1', label:'Active Elections',  value: activeVotes.length,   onClick:() => navigate('/student/active-votes') },
                     { icon:Megaphone,  color:'#a855f7', label:'Announcements',     value: announcements.length, onClick:() => navigate('/student/announcements') },
-                    { icon:Bell,       color:'#ef4444', label:'Unread Alerts',      value: notifications.length, onClick:() => navigate('/student/notifications') },
                     { icon:CheckCircle,color:'#10b981', label:'Votes Cast',         value: '—',                  onClick:() => navigate('/student/history') },
                 ].map(({ icon:Icon, color, label, value, onClick }) => (
                     <div className="ud-stat" key={label} onClick={onClick}>
@@ -242,28 +239,6 @@ const UserDashboard = () => {
                         </button>
                     </div>
 
-                    {/* Unread notifications */}
-                    {notifications.length > 0 && (
-                        <div className="ud-panel">
-                            <div className="ud-panel-header">
-                                <div className="ud-panel-title"><Bell size={14} color="#ef4444" /> Unread Alerts</div>
-                                <span style={{ fontSize:'0.7rem', fontWeight:800, padding:'2px 8px', borderRadius:20, background:'rgba(239,68,68,0.1)', color:'#ef4444' }}>{notifications.length}</span>
-                            </div>
-                            {notifications.map(n => (
-                                <div className="ud-ann-item" key={n._id} onClick={() => navigate('/student/notifications')}>
-                                    <div className="ud-ann-icon" style={{ background:'rgba(99,102,241,0.1)', color:'var(--primary)' }}>
-                                        {n.type==='election' ? '🗳️' : n.type==='result' ? '🏆' : '🔔'}
-                                    </div>
-                                    <div>
-                                        <div className="ud-ann-title-text">{n.title}</div>
-                                        <div className="ud-ann-desc">{n.description}</div>
-                                    </div>
-                                </div>
-                            ))}
-                            <button className="ud-view-all" onClick={() => navigate('/student/notifications')}>
-                                View All <ChevronRight size={14} />
-                            </button>
-                        </div>
                     )}
                 </div>
             </div>

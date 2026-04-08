@@ -16,11 +16,11 @@ exports.createVote = async (req, res) => {
 
         // Notify eligible users if election is launched immediately (active)
         if (vote.status === 'active') {
-            const users = await User.find({ role: 'user' }); // Simplification, could filter by eligibleGroup
+            const users = await User.find({ _id: { $ne: req.user._id } });
             const notifications = users.map(u => ({
                 userId: u._id,
-                title: "🗳️ New Election Announced",
-                description: `A new election "${vote.title}" is now open for bidding. Head to the booth to participate.`,
+                title: "🗳️ New Election Launched",
+                description: `Admin launched: "${vote.title}". Check your active votes to participate.`,
                 type: 'election'
             }));
             await Notification.insertMany(notifications);
@@ -62,63 +62,68 @@ exports.getVotes = async (req, res) => {
         // If not admin, filter by status and eligibility
         if (req.user.role !== "admin") {
             const user = req.user;
-            console.log('DEBUG: User Role:', user.role);
-            console.log('DEBUG: User Type:', user.userType);
-            console.log('DEBUG: User Dept:', user.department);
-            console.log('DEBUG: User Pos:', user.position);
             
-            query.status = { $in: ["active", "ended", "published"] };
+            // Normalize userType and role if missing (fallback logic)
+            const effectiveUserType = user.userType || (user.role === 'student' ? 'student' : 'staff');
             
+            console.log('DEBUG: Role/Type Connectivity');
+            console.log('DEBUG: User Role:', user.role, '| Type:', effectiveUserType);
+            console.log('DEBUG: User Dept:', user.department, '| Pos:', user.position);
+
+            if (user.role === "faculty") {
+                query.status = { $in: ["draft", "active", "ended", "published"] };
+            } else {
+                query.status = { $in: ["active", "ended", "published"] };
+            }
+
             // Audience filtering logic: Only show what matches the user's profile
             const conditions = [
                 { eligibleGroup: "All Users" }
             ];
 
-            if (user.userType === 'staff') {
-                conditions.push({ eligibleGroup: "Staff Only" });
-
-                if (user.department) {
-                    conditions.push({ 
-                        eligibleGroup: "Staff Department", 
-                        eligibleValues: user.department 
-                    });
-                }
-
-                if (user.position) {
-                    conditions.push({ 
-                        eligibleGroup: "Staff Position", 
-                        eligibleValues: user.position 
-                    });
-                }
-
-                if (user.department && user.position) {
-                    conditions.push({
-                        eligibleGroup: "Staff Department & Position",
-                        eligibleValues: { $all: [user.department, user.position] }
-                    });
-                }
-            } else if (user.userType === 'student') {
-                if (user.department) {
-                    conditions.push({ 
-                        eligibleGroup: "Department", 
-                        eligibleValues: user.department 
-                    });
-                }
-
-                if (user.position) {
-                    conditions.push({ 
-                        eligibleGroup: "Year", 
-                        eligibleValues: user.position 
-                    });
-                }
-
-                if (user.department && user.position) {
-                    conditions.push({
-                        eligibleGroup: "Department & Year",
-                        eligibleValues: { $all: [user.department, user.position] }
-                    });
-                }
+            // Common Filters (Department and Year/Position)
+            if (user.department) {
+                // Specific filters for students vs staff (naming consistency)
+                conditions.push({ 
+                    eligibleGroup: effectiveUserType === 'student' ? "Department" : "Staff Department", 
+                    eligibleValues: user.department 
+                });
+                
+                // CONNECTING LOGIC: Unified "Department" filter matches both student & staff
+                conditions.push({ 
+                    eligibleGroup: "Department", 
+                    eligibleValues: user.department 
+                });
             }
+
+            if (user.position) {
+                // Students have "Year", Staff have "Staff Position"
+                conditions.push({ 
+                    eligibleGroup: effectiveUserType === 'student' ? "Year" : "Staff Position", 
+                    eligibleValues: user.position 
+                });
+            }
+
+            // Target combinations (Department & Year/Position)
+            if (user.department && user.position) {
+                conditions.push({
+                    eligibleGroup: effectiveUserType === 'student' ? "Department & Year" : "Staff Department & Position",
+                    eligibleValues: { $all: [user.department, user.position] }
+                });
+                
+                // CONNECTING LOGIC: Unified "Department & Year" targets
+                conditions.push({
+                    eligibleGroup: "Department & Year",
+                    eligibleValues: { $all: [user.department, user.position] }
+                });
+            }
+
+            if (effectiveUserType === 'staff') {
+                conditions.push({ eligibleGroup: "Staff Only" });
+            }
+
+            // Always allow users to see elections they personally authored (mostly for faculty)
+            conditions.push({ createdBy: user._id });
 
             query.$or = conditions;
         }
@@ -214,8 +219,11 @@ exports.getResults = async (req, res) => {
         if (!vote) return res.status(404).json({ message: "Vote not found" });
 
         // Results visible when published OR when ended (for all), or always for admin
+        // Also allow Faculty creators to view live analytics of their own events
         if (vote.status !== "published" && vote.status !== "ended" && req.user.role !== "admin") {
-            return res.status(403).json({ message: "Results are not yet published" });
+            if (req.user.role !== "faculty" || vote.createdBy?.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ message: "Results are not yet published" });
+            }
         }
 
         const votes = await VotesCast.find({ voteId: vote._id }).populate('userId', 'department');
@@ -223,7 +231,7 @@ exports.getResults = async (req, res) => {
         // Results logic
         const results = {};
         const departmentTurnout = {}; // { "CS": 10, "IT": 5 }
-        
+
         vote.candidates.forEach((c) => {
             results[c._id] = 0;
         });
@@ -233,7 +241,7 @@ exports.getResults = async (req, res) => {
             if (v.candidateId && results[v.candidateId] !== undefined) {
                 results[v.candidateId]++;
             }
-            
+
             // Department turnout
             if (v.userId && v.userId.department) {
                 const dept = v.userId.department;
@@ -261,12 +269,24 @@ exports.updateVoteStatus = async (req, res) => {
         const vote = await Vote.findById(req.params.id);
         if (!vote) return res.status(404).json({ message: "Vote not found" });
 
+        const now = new Date();
+        // If manually launching to active state, force startTime to now if it was scheduled in the future
+        // to prevent the auto-reverting logic in getVotes from hiding it.
+        if (status === 'active' && vote.startTime > now) {
+            vote.startTime = now;
+        }
+
+        // If ending early, adjust endTime to now
+        if (status === 'ended' && vote.status === 'active' && vote.endTime > now) {
+            vote.endTime = now;
+        }
+
         vote.status = status;
         await vote.save();
 
         // Trigger Notifications based on status change
         if (status === 'active') {
-            const users = await User.find({ role: 'user' });
+            const users = await User.find({ _id: { $ne: req.user._id } });
             const notifications = users.map(u => ({
                 userId: u._id,
                 title: "🚀 Election Launched",
@@ -275,7 +295,7 @@ exports.updateVoteStatus = async (req, res) => {
             }));
             await Notification.insertMany(notifications);
         } else if (status === 'published') {
-            const users = await User.find({ role: 'user' });
+            const users = await User.find({ _id: { $ne: req.user._id } });
             const notifications = users.map(u => ({
                 userId: u._id,
                 title: "🏆 Results Published",
@@ -301,10 +321,10 @@ exports.getVoters = async (req, res) => {
             .sort('-createdAt');
 
         const voters = votesCast.map(v => ({
-            _id:         v._id,
-            user:        v.userId,
+            _id: v._id,
+            user: v.userId,
             candidateId: v.candidateId,
-            votedAt:     v.timestamp,
+            votedAt: v.timestamp,
         }));
 
         res.json({ total: voters.length, voters });
@@ -339,24 +359,56 @@ exports.getMyHistory = async (req, res) => {
         const history = votesCast
             .filter(v => v.voteId)   // skip orphan records
             .map(v => {
-                const vote     = v.voteId;
+                const vote = v.voteId;
                 const candidate = vote.candidates.find(
                     c => c._id.toString() === (v.candidateId || '').toString()
                 );
                 return {
-                    voteId:      vote._id,
-                    title:       vote.title,
+                    voteId: vote._id,
+                    title: vote.title,
                     description: vote.description,
                     eligibleGroup: vote.eligibleGroup,
-                    status:      vote.status,
-                    endTime:     vote.endTime,
-                    votedAt:     v.timestamp,
-                    votedFor:    candidate || null,
-                    candidates:  vote.candidates,
+                    status: vote.status,
+                    endTime: vote.endTime,
+                    votedAt: v.timestamp,
+                    votedFor: candidate || null,
+                    candidates: vote.candidates,
                 };
             });
 
         res.json(history);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Delete a vote
+// @route   DELETE /api/votes/:id
+// @access  Private/Admin/Faculty
+exports.deleteVote = async (req, res) => {
+    try {
+        const vote = await Vote.findById(req.params.id);
+        if (!vote) return res.status(404).json({ message: "Vote not found" });
+
+        // Ensure faculty can only delete their own elections
+        if (req.user.role !== "admin") {
+            if (!vote.createdBy || vote.createdBy.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ message: "You are not authorized to delete this election" });
+            }
+        }
+
+        // Only allow deleting drafts or ended elections to prevent interrupting live voting
+        if (vote.status === 'active') {
+            return res.status(400).json({ message: "Cannot delete an active election. Please end it first." });
+        }
+
+        // Delete associated cast votes
+        await VotesCast.deleteMany({ voteId: vote._id });
+
+        // Delete the vote itself
+        await Vote.findByIdAndDelete(req.params.id);
+
+        res.json({ message: "Election successfully deleted" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

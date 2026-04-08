@@ -1,13 +1,12 @@
-﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import http from '@/config/http';
 import { toast } from 'react-hot-toast';
 import {
     Vote, Clock, Check, X, ChevronDown, ChevronUp,
     User, Mail, BookOpen, Calendar, AlertCircle, Filter
 } from 'lucide-react';
 
-const API = API_BASE_URL;
+// API usage will now use http instance
 
 const STATUS_META = {
     pending:  { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  label: 'Pending Review' },
@@ -28,24 +27,22 @@ const ElectionRequests = () => {
 
     const fetchRequests = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res   = await axios.get(`${API}/election-requests`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await http.get('/election-requests');
             setRequests(res.data);
-        } catch { toast.error('Failed to load election requests'); }
-        finally  { setLoading(false); }
+        } catch (err) { 
+            console.error('Fetch error:', err);
+            toast.error('Failed to load election requests'); 
+        } finally  { setLoading(false); }
     };
 
     const handleReview = async () => {
         if (!reviewModal) return;
         setSubmitting(true);
         try {
-            const token = localStorage.getItem('token');
-            await axios.patch(`${API}/election-requests/${reviewModal.id}`, {
+            await http.patch(`/election-requests/${reviewModal.id}`, {
                 status: reviewModal.action,
                 reviewNote,
-            }, { headers: { Authorization: `Bearer ${token}` } });
+            });
             toast.success(reviewModal.action === 'approved'
                 ? '✅ Request approved! Draft election created.'
                 : '❌ Request rejected. Student notified.');

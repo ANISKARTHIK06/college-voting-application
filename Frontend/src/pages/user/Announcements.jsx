@@ -1,6 +1,5 @@
-﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import http from '@/config/http';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
@@ -8,7 +7,7 @@ import {
     Filter, ChevronRight, Bell
 } from 'lucide-react';
 
-const API = API_BASE_URL;
+// API usage will now use http instance
 
 const UserAnnouncements = () => {
     const [announcements, setAnnouncements] = useState([]);
@@ -18,10 +17,8 @@ const UserAnnouncements = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        axios.get(`${API}/announcements`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then(r => setAnnouncements(r.data))
+        http.get('/announcements')
+          .then(r => setAnnouncements(r.data))
           .catch(() => toast.error('Failed to load announcements'))
           .finally(() => setLoading(false));
     }, []);

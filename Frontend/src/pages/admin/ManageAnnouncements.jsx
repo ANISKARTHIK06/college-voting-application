@@ -1,6 +1,5 @@
-﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import http from '@/config/http';
 import { toast } from 'react-hot-toast';
 import {
     Megaphone, Search, Trash2, AlertCircle, Clock,
@@ -31,10 +30,9 @@ const ManageAnnouncements = () => {
     const fetchAnnouncements = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
-            let url = `${API_BASE_URL}/announcements`;
+            let url = `/announcements`;
             if (filter === 'Archived') url += '?isArchived=true';
-            const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await http.get(url);
             setAnnouncements(res.data);
         } catch {
             toast.error('Failed to load announcements');
@@ -48,10 +46,7 @@ const ManageAnnouncements = () => {
             setSelectedAnnouncement(announcement);
             setShowAudit(true);
             setAuditLoading(true);
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${API_BASE_URL}/announcements/${announcement._id}/revisions`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await http.get(`/announcements/${announcement._id}/revisions`);
             setAuditData(res.data);
         } catch {
             toast.error('Failed to load revision history');
@@ -63,14 +58,11 @@ const ManageAnnouncements = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
             const payload = {
                 ...formData,
                 targetValues: formData.targetValues.split(',').map(v => v.trim()).filter(v => v)
             };
-            await axios.post(`${API_BASE_URL}/announcements`, payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await http.post(`/announcements`, payload);
             toast.success('Announcement published successfully!');
             setShowCreate(false);
             setFormData({ title: '', description: '', priority: 'Normal', targetType: 'Global', targetValues: '' });
@@ -83,10 +75,7 @@ const ManageAnnouncements = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Archive this announcement?')) return;
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`${API_BASE_URL}/announcements/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await http.delete(`/announcements/${id}`);
             toast.success('Archived successfully');
             fetchAnnouncements();
         } catch {

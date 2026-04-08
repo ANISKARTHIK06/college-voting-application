@@ -1,5 +1,7 @@
 const Announcement = require("../models/Announcement");
 const AnnouncementRevision = require("../models/AnnouncementRevision");
+const Notification = require("../models/Notification");
+const User = require("../models/User");
 
 // @desc    Get all announcements
 // @route   GET /api/announcements
@@ -36,6 +38,17 @@ exports.createAnnouncement = async (req, res) => {
             ...req.body,
             createdBy: req.user.id,
         });
+
+        // Trigger Notifications for all users
+        const users = await User.find({ _id: { $ne: req.user.id } });
+        const notifications = users.map(u => ({
+            userId: u._id,
+            title: "📢 New Announcement",
+            description: `Admin published: "${announcement.title}". Read the full details in the announcements tab.`,
+            type: 'announcement'
+        }));
+        await Notification.insertMany(notifications);
+
         res.status(201).json(announcement);
     } catch (error) {
         res.status(400).json({ message: error.message });

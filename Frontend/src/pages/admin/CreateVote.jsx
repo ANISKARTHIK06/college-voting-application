@@ -1,4 +1,4 @@
-﻿import API_BASE_URL from '@/config/api';
+import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -39,7 +39,6 @@ const CreateVote = () => {
         votingType: 'Election',
         eligibleGroup: 'All Users',
         eligibleValues: [],
-        startTime: '',
         startTime: '',
         endTime: '',
         candidates: [{ user: null, name: '', registerNumber: '', description: '' }]

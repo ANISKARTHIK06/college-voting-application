@@ -18,6 +18,9 @@ exports.protect = async (req, res, next) => {
 
             // Get user from the token
             req.user = await User.findById(decoded.id).select("-password");
+            if (!req.user) {
+                return res.status(401).json({ message: "No user found with this ID" });
+            }
 
             next();
         } catch (error) {

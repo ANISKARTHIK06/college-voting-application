@@ -1,8 +1,7 @@
-﻿import API_BASE_URL from '@/config/api';
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import http from '@/config/http';
 import { toast } from 'react-hot-toast';
-import { Megaphone, ClipboardList, Shield, Zap } from 'lucide-react';
+import { Megaphone, ClipboardList, Shield, Zap, Check, X, Clock, MessageSquare, List } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import StatCard from '../../components/shared/StatCard';
 import AnalyticsSection from '../../components/shared/AnalyticsSection';
@@ -12,38 +11,58 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [announcements, setAnnouncements] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchData = async () => {
+    try {
+      const [annRes, actRes, reqRes, eleRes] = await Promise.all([
+        http.get('/announcements'),
+        http.get('/activity'),
+        http.get('/election-requests'),
+        http.get('/votes')
+      ]);
+      setAnnouncements(annRes.data.slice(0, 3));
+      setActivity(actRes.data.slice(0, 3));
+      setRequests(reqRes.data);
+      setElections(eleRes.data);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const [annRes, actRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/announcements`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_BASE_URL}/activity`, { headers: { Authorization: `Bearer ${token}` } })
-        ]);
-        setAnnouncements(annRes.data.slice(0, 3));
-        setActivity(actRes.data.slice(0, 3));
-      } catch (error) {
-        console.error('Failed to fetch dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
+
+  const handleReview = async (id, action) => {
+    try {
+      await http.patch(`/election-requests/${id}`, {
+        status: action,
+        reviewNote: action === 'approved' ? 'Approved from dashboard' : 'Rejected from dashboard'
+      });
+      
+      toast.success(action === 'approved' ? 'Request Approved!' : 'Request Rejected.');
+      fetchData(); // Refresh data
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Action failed');
+    }
+  };
 
   const managementModules = [
     { title: 'Election Ops', desc: 'Lifecycle, dates, and status', icon: '🗳️', link: '/admin/active-votes', color: 'var(--primary)' },
     { title: 'User Directory', desc: 'CSV Import & Access Toggles', icon: '👥', link: '/admin/users', color: 'var(--secondary)' },
-    { title: 'Live Tracker', desc: 'Real-time turnout & results', icon: '📊', link: '/admin/active-votes', color: 'var(--accent)' },
-    { title: 'System Security', desc: 'Audit logs & integrity', icon: '🛡️', link: '#', color: 'var(--success)' },
+    { title: 'Election Requests', desc: 'Review student proposals', icon: '📩', link: '/admin/election-requests', color: '#f59e0b' },
+    { title: 'System Security', desc: 'Audit logs & integrity', icon: '🛡️', link: '/admin/activity', color: 'var(--success)' },
   ];
 
   const stats = [
     { icon: '👥', value: '1,542', label: 'Registered Voters', trend: 12.5 },
     { icon: '🗳️', value: '12', label: 'Active Elections', trend: 2, trendType: 'up' },
-    { icon: '📈', value: '82.4%', label: 'Avg. Participation', trend: 4.1, trendType: 'up' },
+    { icon: '📩', value: requests.filter(r => r.status === 'pending').length.toString(), label: 'Pending Requests', trend: requests.length, trendType: 'neutral' },
     { icon: '🛡️', value: '100%', label: 'System Integrity' }
   ];
 
@@ -152,20 +171,92 @@ const AdminDashboard = () => {
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
-              {[1, 2].map(i => (
-                <div key={i} className="panel-item glass-card">
+              {elections.length > 0 ? elections.filter(e => e.status !== 'ended').slice(0, 3).map(e => (
+                <div key={e._id} className="panel-item glass-card">
                   <div className="panel-item-icon">🗳️</div>
                   <div className="panel-item-content">
-                    <div className="panel-item-title">Student Council {i === 1 ? 'President' : 'General Secretary'} 2026</div>
-                    <div className="panel-item-subtitle">High participation • {i === 1 ? '3 days' : '14 hours'} remaining</div>
+                    <div className="panel-item-title">{e.title}</div>
+                    <div className="panel-item-subtitle">
+                      {e.status === 'active' ? 'Live voting' : 'Draft / Waiting'} • 
+                      {new Date(e.endTime) > new Date() 
+                        ? `${Math.round((new Date(e.endTime) - new Date()) / (1000*60*60*24))} days left` 
+                        : 'Ended'}
+                    </div>
                   </div>
-                  <div className="badge badge-active">Active</div>
+                  <div className={`badge badge-${e.status === 'active' ? 'active' : 'draft'}`} style={{ 
+                    textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 800,
+                    background: e.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(148,163,184,0.1)',
+                    color: e.status === 'active' ? '#22c55e' : '#94a3b8',
+                    padding: '4px 8px', borderRadius: '4px'
+                  }}>
+                    {e.status}
+                  </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <Link to={`/admin/candidates/mock-id-${i}`} className="btn btn-ghost btn-sm">Candidates</Link>
-                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/active-votes')}>Manage</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => navigate(`/admin/votes/manage/${e._id}`)}>Manage</button>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-6 text-muted" style={{ fontSize: '0.875rem' }}>
+                  No active or draft elections to display.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 📩 Pending Election Requests Section */}
+          <div className="dashboard-card glass-panel animate-slideUp" style={{ animationDelay: '0.3s', marginTop: '32px' }}>
+            <div className="card-header">
+              <h3 className="section-title">Incoming Election Proposals</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin/election-requests')}>View All</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+              {requests.filter(r => r.status === 'pending').length > 0 ? (
+                requests.filter(r => r.status === 'pending').slice(0, 3).map(r => (
+                  <div key={r._id} className="panel-item glass-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                    <div className="panel-item-icon" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>📩</div>
+                    <div className="panel-item-content">
+                      <div className="panel-item-title" style={{ fontWeight: 700 }}>{r.title}</div>
+                      <div className="panel-item-subtitle" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        Proposed by {r.requestedBy?.name || 'Student'} • {r.eligibleGroup}
+                      </div>
+                      <div className="req-rationale" style={{ 
+                        fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', 
+                        padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px',
+                        border: '1px dashed rgba(255,255,255,0.1)', fontStyle: 'italic'
+                      }}>
+                        <MessageSquare size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                        "{r.description.slice(0, 80)}{r.description.length > 80 ? '...' : ''}"
+                      </div>
+                      <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                         <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                            <List size={10} style={{ marginRight: 3 }} /> {r.candidates?.length || 0} Candidates
+                         </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        className="btn btn-success btn-sm" 
+                        style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', padding: '6px 12px' }}
+                        onClick={() => handleReview(r._id, 'approved')}
+                      >
+                        <Check size={14} style={{ marginRight: 4 }} /> Approve
+                      </button>
+                      <button 
+                        className="btn btn-danger btn-sm" 
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', padding: '6px 12px' }}
+                        onClick={() => handleReview(r._id, 'rejected')}
+                      >
+                        <X size={14} style={{ marginRight: 4 }} /> Reject
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-muted" style={{ fontSize: '0.875rem' }}>
+                   No pending election proposals at the moment.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -201,8 +292,8 @@ const AdminDashboard = () => {
               <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/admin/announcements')}>
                 📢 Publish Announcement
               </button>
-              <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/admin/alerts')}>
-                🔔 Send Notification
+              <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', gap: '8px' }} onClick={() => navigate('/admin/election-requests')}>
+                📩 Review Election Proposals
               </button>
               <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/admin/activity')}>
                 📋 View Full Activity Log
