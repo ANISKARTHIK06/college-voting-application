@@ -18,10 +18,11 @@ router.use(protect);
 router.get("/search", searchUsers);
 router.get("/students", getAllStudents);
 
-// The rest are admin only
+// The rest are admin only (except GET / which allows faculty too)
+router.get("/", authorize("admin", "faculty"), getAllUsers);
+
 router.use(authorize("admin"));
 
-router.get("/", getAllUsers);
 router.post("/import", bulkImportUsers);
 router.get("/:id", getUserById);
 router.patch("/:id/role", updateUserRole);

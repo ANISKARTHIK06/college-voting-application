@@ -1,8 +1,10 @@
-﻿import API_BASE_URL from '@/config/api';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import http from '@/config/http';
+import { getCurrentUser } from '../../services/authService';
 
 const UsersManagement = () => {
+    const userRole = getCurrentUser()?.role;
+    const isAdmin = userRole === 'admin';
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -14,10 +16,7 @@ const UsersManagement = () => {
 
     const fetchUsers = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${API_BASE_URL}/users`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await http.get('/users');
             setUsers(res.data);
         } catch (error) {
             console.error('Failed to fetch users');
@@ -27,15 +26,13 @@ const UsersManagement = () => {
     };
 
     const toggleRole = async (userId, currentRole) => {
+        if (!isAdmin) return;
         const action = currentRole === 'admin' ? 'demote' : 'promote';
         if (!window.confirm(`Are you sure you want to ${action} this user?`)) return;
         
         try {
-            const token = localStorage.getItem('token');
             const newRole = currentRole === 'admin' ? 'user' : 'admin';
-            await axios.patch(`${API_BASE_URL}/users/${userId}/role`, { role: newRole }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await http.patch(`/users/${userId}/role`, { role: newRole });
             fetchUsers();
         } catch (error) {
             alert('Failed to update role');
@@ -43,11 +40,9 @@ const UsersManagement = () => {
     };
 
     const toggleStatus = async (userId) => {
+        if (!isAdmin) return;
         try {
-            const token = localStorage.getItem('token');
-            await axios.patch(`${API_BASE_URL}/users/${userId}/status`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await http.patch(`/users/${userId}/status`);
             fetchUsers();
         } catch (error) {
             alert('Failed to toggle access status');
@@ -55,6 +50,7 @@ const UsersManagement = () => {
     };
 
     const handleFileUpload = async (event) => {
+        if (!isAdmin) return;
         const file = event.target.files[0];
         if (!file) return;
 
@@ -74,10 +70,7 @@ const UsersManagement = () => {
             });
 
             try {
-                const token = localStorage.getItem('token');
-                const res = await axios.post(`${API_BASE_URL}/users/import`, { users: usersData }, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await http.post('/users/import', { users: usersData });
                 alert(res.data.message);
                 fetchUsers();
             } catch (error) {
@@ -112,14 +105,16 @@ const UsersManagement = () => {
         <div className="users-management-page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Directory Management</h1>
-                    <p className="page-subtitle">Manage platform permissions and user identities</p>
+                    <h1 className="page-title">{isAdmin ? 'Directory Management' : 'User Directory'}</h1>
+                    <p className="page-subtitle">{isAdmin ? 'Manage platform permissions and user identities' : 'Browse registered users and student identities'}</p>
                 </div>
                 <div className="page-header-actions">
-                    <label className={`btn btn-secondary ${importing ? 'disabled' : ''}`} style={{ cursor: 'pointer' }}>
-                        {importing ? 'Importing...' : '📥 Bulk Import CSV'}
-                        <input type="file" accept=".csv" onChange={handleFileUpload} hidden disabled={importing} />
-                    </label>
+                    {isAdmin && (
+                        <label className={`btn btn-secondary ${importing ? 'disabled' : ''}`} style={{ cursor: 'pointer' }}>
+                            {importing ? 'Importing...' : '📥 Bulk Import CSV'}
+                            <input type="file" accept=".csv" onChange={handleFileUpload} hidden disabled={importing} />
+                        </label>
+                    )}
                     <div className="glass-panel" style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>DEPT:</span>
                         <select 
@@ -160,7 +155,7 @@ const UsersManagement = () => {
                                 <th style={{ padding: '20px 24px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Department</th>
                                 <th style={{ padding: '20px 24px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Access Role</th>
                                 <th style={{ padding: '20px 24px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Eligibility</th>
-                                <th style={{ padding: '20px 24px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Management</th>
+                                {isAdmin && <th style={{ padding: '20px 24px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Management</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -193,23 +188,25 @@ const UsersManagement = () => {
                                             {user.isActive ? 'Eligible' : 'Deactivated'}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '24px', textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                            <button 
-                                                className={`btn btn-sm btn-ghost`}
-                                                onClick={() => toggleStatus(user._id)}
-                                                title={user.isActive ? 'Deactivate Access' : 'Activate Access'}
-                                            >
-                                                {user.isActive ? '🚫 Disable' : '✅ Enable'}
-                                            </button>
-                                            <button 
-                                                className={`btn btn-sm ${user.role === 'admin' ? 'btn-ghost' : 'btn-secondary'}`}
-                                                onClick={() => toggleRole(user._id, user.role)}
-                                            >
-                                                {user.role === 'admin' ? '🛡️ Demote' : '⚡ Admin'}
-                                            </button>
-                                        </div>
-                                    </td>
+                                    {isAdmin && (
+                                        <td style={{ padding: '24px', textAlign: 'right' }}>
+                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                <button 
+                                                    className={`btn btn-sm btn-ghost`}
+                                                    onClick={() => toggleStatus(user._id)}
+                                                    title={user.isActive ? 'Deactivate Access' : 'Activate Access'}
+                                                >
+                                                    {user.isActive ? '🚫 Disable' : '✅ Enable'}
+                                                </button>
+                                                <button 
+                                                    className={`btn btn-sm ${user.role === 'admin' ? 'btn-ghost' : 'btn-secondary'}`}
+                                                    onClick={() => toggleRole(user._id, user.role)}
+                                                >
+                                                    {user.role === 'admin' ? '🛡️ Demote' : '⚡ Admin'}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
@@ -224,13 +221,15 @@ const UsersManagement = () => {
                 )}
             </div>
             
-            <div className="dashboard-card glass-panel" style={{ marginTop: '32px', background: 'var(--info-bg)', borderColor: 'var(--info)' }}>
-                <h4 style={{ fontSize: '0.9rem', color: 'var(--info)', marginBottom: '8px' }}>CSV Import Formatting</h4>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-main)', opacity: 0.8 }}>
-                    <strong>Expected Columns:</strong> name, email, userType (student/staff), department, position. 
-                    <br />Passwords will be set to "College@123" by default unless specified.
-                </p>
-            </div>
+            {isAdmin && (
+                <div className="dashboard-card glass-panel" style={{ marginTop: '32px', background: 'var(--info-bg)', borderColor: 'var(--info)' }}>
+                    <h4 style={{ fontSize: '0.9rem', color: 'var(--info)', marginBottom: '8px' }}>CSV Import Formatting</h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-main)', opacity: 0.8 }}>
+                        <strong>Expected Columns:</strong> name, email, userType (student/staff), department, position. 
+                        <br />Passwords will be set to "College@123" by default unless specified.
+                    </p>
+                </div>
+            )}
         </div>
     );
 };

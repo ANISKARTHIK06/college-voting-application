@@ -81,6 +81,7 @@ function App() {
             <Route path="/faculty/approve-proposals" element={<ElectionRequests />} />
             <Route path="/faculty/notifications" element={<Notifications />} />
             <Route path="/faculty/profile" element={<UserProfile />} />
+            <Route path="/faculty/users" element={<UsersManagement />} />
           </Route>
         </Route>
 

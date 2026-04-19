@@ -37,6 +37,7 @@ const facultyItems = [
   { label: 'Create Election', path: '/faculty/create-election', icon: <Plus size={18} />, section: 'GOVERNANCE' },
   { label: 'Election Monitoring', path: '/faculty/monitoring', icon: <CheckCircle size={18} /> },
   { label: 'Approve Proposals', path: '/faculty/approve-proposals', icon: <CheckCircle size={18} /> },
+  { label: 'Users', path: '/faculty/users', icon: <Users size={18} /> },
   { label: 'Results', path: '/faculty/results', icon: <CheckCircle size={18} />, section: 'REPORTS' },
   { label: 'Announcements', path: '/faculty/announcements', icon: <Megaphone size={18} />, section: 'COMMUNITY' },
   { label: 'Profile', path: '/faculty/profile', icon: <UserCircle size={18} />, section: 'ACCOUNT' },
