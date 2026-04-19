@@ -32,7 +32,7 @@ function Login() {
             
             if (data.role === 'admin') {
                 navigate('/admin/dashboard');
-            } else if (data.role === 'faculty') {
+            } else if (data.role === 'faculty' || data.userType === 'staff') {
                 navigate('/faculty/dashboard');
             } else {
                 navigate('/student/dashboard');

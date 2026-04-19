@@ -17,18 +17,22 @@ const FacultyDashboard = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [requests, setRequests] = useState([]);
   const [elections, setElections] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const [annRes, reqRes, eleRes] = await Promise.all([
+      const [annRes, reqRes, eleRes, stuRes] = await Promise.all([
         http.get('/announcements'),
         http.get('/election-requests'),
-        http.get('/votes')
+        http.get('/votes'),
+        http.get('/users/students')
       ]);
       setAnnouncements(annRes.data.slice(0, 3));
       setRequests(reqRes.data);
       setElections(eleRes.data);
+      setStudents(stuRes.data);
     } catch (error) {
       console.error('Failed to fetch dashboard data');
     } finally {
@@ -100,9 +104,11 @@ const FacultyDashboard = () => {
             <div>
                 <h1 className="fd-hero-title">Institution Portal, {user?.name?.split(' ')[0]}</h1>
                 <p className="fd-hero-sub">Overseeing {user?.department || 'Administration'} Governance & Integrity</p>
-                <div style={{ display:'flex', gap:10, marginTop:16 }}>
+                <div style={{ display:'flex', gap:10, marginTop:16, flexWrap:'wrap' }}>
                     <span className="badge" style={{ background:'rgba(99,102,241,0.1)', color:'var(--primary)', padding:'6px 14px' }}>🛡️ Authorized Staff</span>
                     <span className="badge" style={{ background:'rgba(16,185,129,0.1)', color:'#10b981', padding:'6px 14px' }}>📡 System Live</span>
+                    <span className="badge" style={{ background:'rgba(255,255,255,0.05)', color:'var(--text-muted)', padding:'6px 14px' }}>🆔 {user?.registerNumber}</span>
+                    <span className="badge" style={{ background:'rgba(255,255,255,0.05)', color:'var(--text-muted)', padding:'6px 14px' }}>✉️ {user?.email}</span>
                 </div>
             </div>
             <div className="fd-avatar" style={{ cursor:'pointer' }} onClick={() => navigate('/faculty/profile')}>{getInitials(user?.name)}</div>
@@ -175,6 +181,47 @@ const FacultyDashboard = () => {
                         </div>
                     ))}
                     {elections.filter(e => e.status === 'active').length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '24px 0' }}>No live campaigns.</p>}
+                </div>
+
+                {/* 👥 Student Directory */}
+                <div className="fd-section">
+                    <div className="fd-section-head">
+                        <h3 className="fd-section-title"><Users size={16} color="var(--primary)" /> Student Directory</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-main)', padding: '4px 12px', borderRadius: 12, border: '1px solid var(--border)' }}>
+                            <Search size={14} color="var(--text-muted)" />
+                            <input 
+                                type="text" 
+                                placeholder="Search students..." 
+                                style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none', width: 150 }}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 4 }}>
+                        {students.filter(s => 
+                            s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            s.registerNumber.toLowerCase().includes(searchTerm.toLowerCase())
+                        ).length > 0 ? (
+                            students.filter(s => 
+                                s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                s.registerNumber.toLowerCase().includes(searchTerm.toLowerCase())
+                            ).map(s => (
+                                <div key={s.registerNumber} className="fd-item" style={{ padding: '14px 18px', marginBottom: 8 }}>
+                                    <div className="topbar-avatar" style={{ width: 34, height: 34, fontSize: '0.8rem' }}>{s.name[0]}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.85rem' }}>{s.name}</div>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                                            Reg: {s.registerNumber} • Dept: {s.department}
+                                        </div>
+                                    </div>
+                                    <span style={{ fontSize: '0.65rem', padding: '3px 8px', borderRadius: 6, background: 'rgba(99,102,241,0.05)', color: 'var(--primary)', fontWeight: 700 }}>STUDENT</span>
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '24px 0' }}>{searchTerm ? 'No matching students found.' : 'Loading student directory...'}</p>
+                        )}
+                    </div>
                 </div>
             </div>
 

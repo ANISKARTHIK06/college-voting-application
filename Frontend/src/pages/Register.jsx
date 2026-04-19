@@ -46,8 +46,15 @@ function Register() {
 
         try {
             const { confirmPassword, ...userData } = formData;
-            await register({ ...userData, role: 'student' });
-            navigate('/student/dashboard');
+            // Map 'staff' userType to 'faculty' role for backend consistency
+            const finalRole = formData.userType === 'staff' ? 'faculty' : 'student';
+            const data = await register({ ...userData, role: finalRole });
+            
+            if (data.role === 'faculty') {
+                navigate('/faculty/dashboard');
+            } else {
+                navigate('/student/dashboard');
+            }
         } catch (err) {
             const errorMsg = err.response?.data?.message || 'Registration failed. Please check the information.';
             setError(errorMsg);
